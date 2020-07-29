@@ -8,6 +8,14 @@ environment:
 
 dependencies:
   aqueduct: 3.3.0+1
+  html: ^0.14.0+3
+  convert: ^2.1.1
+  tuple: ^1.0.3
+  basic_utils: ^2.5.4
+  http: ^0.12.1
+  path: ^1.7.0
+  archive: ^2.0.13
+  mongo_dart: ^0.4.0
 
 dev_dependencies:
   test: ^1.0.0

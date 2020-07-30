@@ -1,6 +1,8 @@
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:rutero_server/adminDB.dart';
 import 'package:rutero_server/rutero_server.dart';
+//import 'dart:async';
+//import 'dart:developer' as dev;
 //import 'package:rutero_server/busConsult.dart';
 
 class BusConsult extends ResourceController {
@@ -226,7 +228,6 @@ class BusConsult extends ResourceController {
   @Operation.delete('id')
   Future<Response> deleteByID(@Bind.path('id') String id) async {
     try{
-      
       change = false;
       await globalColl.find().forEach((bus) { //verifica si existe la informacion ingresada por la URL
         if(bus['_id'] == ObjectId.fromHexString(id)){

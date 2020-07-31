@@ -6,8 +6,13 @@ class AdmonDB{
   DbCollection  collBus;
 
   Future<Db> connectToDataBase() async {
+    var key = {
+      "img1": "imagen1",
+      ""
+    };
     db = Db('mongodb://localhost:27017/test');
     await db.open();
+    //await db.createIndex("hola", {"hola", });
     //print('Consultando con mongoDB');
     return db;
   }

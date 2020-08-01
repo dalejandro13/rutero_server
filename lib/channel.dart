@@ -17,7 +17,7 @@ class RuteroServerChannel extends ApplicationChannel {
 
   RuteroServerChannel(){
     variables = Variables();
-    urlBase = "Api/FlexoRuteros";
+    urlBase = "Api/FlexoRuteros/Buses";
   }
 
   Future<void> getPublicIPAddress() async {
@@ -61,47 +61,47 @@ class RuteroServerChannel extends ApplicationChannel {
 
     //consulta los datos del bus por id
     router
-      .route("$urlBase/Buses/GetID/[:id]")
+      .route("$urlBase/GetID/[:id]")
       .link(() => BusConsult());
 
     //consulta los datos del bus por nombre
     router
-      .route("$urlBase/Buses/ByName/[:name]")
+      .route("$urlBase/ByName/[:name]")
       .link(() => BusConsult());
 
     //consulta todos los buses
     router
-      .route("$urlBase/Buses/[:id]")
+      .route("$urlBase/[:id]")
       .link(() => BusConsult());
 
     //consulta los datos del bus por IP publica
     router
-      .route("$urlBase/Buses/ByPublicIP/[:publicIP]")
+      .route("$urlBase/ByPublicIP/[:publicIP]")
       .link(() => BusConsult());
 
     //consulta los datos del bus por IP compartida 
     router
-      .route("$urlBase/Buses/BySharedIP/[:sharedIP]")
+      .route("$urlBase/BySharedIP/[:sharedIP]")
       .link(() => BusConsult());
 
     //ingresa un nuevo dato de bus si no existe (post)
     router
-      .route("$urlBase/Buses/CreateBus")
+      .route("$urlBase/CreateBus")
       .link(() => BusConsult());
 
     //actualiza dato de bus existente o genera uno nuevo si no existe (put)
     router
-      .route("$urlBase/Buses/UpdateDataBus/[:name]")
+      .route("$urlBase/UpdateDataBus/[:name]")
       .link(() => BusConsult());
 
     //elimina informacion de bus existente por medio de su nombre
     router
-      .route("$urlBase/Buses/DeleteBus/ByName/[:name]")
+      .route("$urlBase/DeleteBus/ByName/[:name]")
       .link(() => BusConsult());
 
     //elimina informacion de bus existente por medio del ID
     router
-      .route("$urlBase/Buses/DeleteBus/ByID/[:id]")
+      .route("$urlBase/DeleteBus/ByID/[:id]")
       .link(() => BusConsult());
 
     return router;

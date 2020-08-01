@@ -18,7 +18,7 @@ class BusConsult extends ResourceController {
 
   void connectDB() async {
     await admon.connectToDataBase().then((datab) {
-      globalColl = datab.collection('Buses');
+      globalColl = datab.collection('RuteroServer');
     });   
   }
 
@@ -58,7 +58,7 @@ class BusConsult extends ResourceController {
   Future<Response> getAllBuses() async {
     try{
       final busesList = [];
-      await globalColl.find().forEach(busesList.add);
+      await globalColl.find().forEach(busesList.add);   
       return Response.ok(busesList);
     }
     catch(e){

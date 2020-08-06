@@ -74,35 +74,41 @@ class RuteroServerChannel extends ApplicationChannel {
 
 
     ///////////////consulta con Usuarios//////////////
-    
-    //consultar todos los ruteros con id de empresa
+        
+    //consultar todos los ruteros con id de empresa //LISTO
     router
       .route("$urlBase/GetUserByID/[:id]")
       .link(() => UserConsult());
     
-    //consultar todos los ruteros por el nombre de la empresa
+    //consultar todos los ruteros por el nombre de la empresa //LISTO
     router
       .route("$urlBase/GetUserByName/[:name]")
       .link(() => UserConsult());
 
-    //ingresa un nuevo usuario si no existe (post)
+    //ingresa un nuevo cliente si no existe (post) //LISTO
     router
-      .route("$urlBase/CreateUser")
+      .route("$urlBase/CreateClient")
       .link(() => UserConsult());
 
-    //inserta datos en la lista de ruteros si esta vacio (put)
+    //insertar informacion en la lista de ruteros si el nombre coincide (put) //LISTO
     router
       .route("$urlBase/InsertDataRuteros/[:nme]")
       .link(() => UserConsult());
 
-    //borra usuario completo por medio de la id
+    //actualizar informacion acerca de los ruteros (put) //
     router
-      .route("$urlBase/DeleteById/[:identy]")
+      .route("$urlBase/UpdateDataRuteros/[:idupdate]")
       .link(() => UserConsult());
 
-    //borra usuario completo por medio del nombre
+
+    //borra rutero por medio de la id //
     router
-      .route("$urlBase/DeleteByName/[:nm]")
+      .route("$urlBase/DeleteRuterosById/[:DeleteRuterosId]")
+      .link(() => UserConsult());
+
+    //borra nombre cliente por medio del id //
+    router
+      .route("$urlBase/DeleteClientById/[:DeleteClientId]")
       .link(() => UserConsult());
 
 
@@ -111,7 +117,7 @@ class RuteroServerChannel extends ApplicationChannel {
     ////////////consulta con RuteroServer//////////////
     //consulta toda la base de datos
     router
-      .route("$urlBase/[:idt]")
+      .route("$urlBase/[:num]")
       .link(() => UserConsult());
 
     //consultar rutero por medio de su id

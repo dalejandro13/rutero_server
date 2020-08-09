@@ -95,23 +95,21 @@ class RuteroServerChannel extends ApplicationChannel {
       .route("$urlBase/InsertDataRuteros/[:nme]")
       .link(() => UserConsult());
 
-    //actualizar informacion acerca de los ruteros (put) //
+    //actualizar informacion acerca de los ruteros (put) //LISTO
     router
       .route("$urlBase/UpdateDataRuteros/[:idupdate]")
       .link(() => UserConsult());
 
 
-    //borra rutero por medio de la id //
+    //borra rutero por medio de la id //LISTO
     router
       .route("$urlBase/DeleteRuterosById/[:DeleteRuterosId]")
       .link(() => UserConsult());
 
-    //borra nombre cliente por medio del id //
+    //borra el cliente por medio su id o por su nombre//
     router
-      .route("$urlBase/DeleteClientById/[:DeleteClientId]")
+      .route("$urlBase/DeleteClient/[:DeleteClientKey]")
       .link(() => UserConsult());
-
-
 
 
     ////////////consulta con RuteroServer//////////////
@@ -129,51 +127,6 @@ class RuteroServerChannel extends ApplicationChannel {
     router
       .route("$urlBase/GetRuteroByName/[:nm]")
       .link(() => UserConsult());
-
-
-
-
-
-    // //ingresa un nuevo usuario si no existe (post)
-    // router
-    //   .route("$urlBase/CreateUser")
-    //   .link(() => ServerConsult());
-
-
-
-
-    // //consulta los datos del bus por nombre
-    // router
-    //   .route("$urlBase/ByName/[:name]")
-    //   .link(() => BusConsult());
-
-    // //consulta los datos del bus por IP publica
-    // router
-    //   .route("$urlBase/ByPublicIP/[:publicIP]")
-    //   .link(() => BusConsult());
-
-    // //consulta los datos del bus por IP compartida 
-    // router
-    //   .route("$urlBase/BySharedIP/[:sharedIP]")
-    //   .link(() => BusConsult());
-
-    
-
-    
-
-    // //elimina informacion de bus existente por medio de su nombre
-    // router
-    //   .route("$urlBase/DeleteBus/ByName/[:name]")
-    //   .link(() => BusConsult());
-
-    // //elimina informacion de bus existente por medio del ID
-    // router
-    //   .route("$urlBase/DeleteBus/ByID/[:id]")
-    //   .link(() => BusConsult());
-
-
-    
-
     
 
     return router;

@@ -30,7 +30,7 @@ class UserConsult extends ResourceController {
     try{
       var busesList = [];
       await globalCollUser.find().forEach((bus) {
-        if(bus['_id'] == ObjectId.fromHexString(id)){
+        if(bus['_id'] == ObjectId.fromHexString(id) || bus['_id'] == id){
           if(bus['ruteros'].length != 0){
             // ignore: prefer_foreach
             for(var val in bus['ruteros']){
@@ -46,7 +46,7 @@ class UserConsult extends ResourceController {
       }
       else{
         await admon.close();
-        return Response.badRequest(body: {'Error':'No se pudieron encontrar elementos para retornar'});
+        return Response.badRequest(body: {'Error':'Este cliente no tiene ruteros registrados en el sistema'});
       }
     }
     catch(e){
@@ -77,7 +77,7 @@ class UserConsult extends ResourceController {
       }
       else{
         await admon.close();
-        return Response.badRequest(body: {'Error': 'No se encontraron elementos para retornar'});
+        return Response.badRequest(body: {'Error': 'No se encontro informacion en la base de datos'});
       }
       
     }
@@ -97,57 +97,64 @@ class UserConsult extends ResourceController {
 
       if(name != null && ruteros != null){
         if(name != "" && ruteros != ""){
-          await globalCollUser.find().forEach((bus) async {
-            if(bus['name'] == name){
-              repeat = true;
-            }
-          });
-
-          if(!repeat){
-            String mens; 
-            await globalCollUser.insert(body);
-            await globalCollUser.find().forEach((data) {
-              bool capture = false;
-              String acum = '';
-              var aa = data['_id'].toString();
-              for(int i = 0; i < aa.length; i++){
-                if(aa[i] == '('){
-                  capture = true;
-                }
-                else if (aa[i] == ')'){
-                  capture = false;
-                }
-
-                if(capture && aa[i] != '(' && aa[i] != ')' && aa[i] != '\"'){
-                  acum += aa[i];
-                }
+          if(ruteros.length == 0){
+            await globalCollUser.find().forEach((bus) async {
+              if(bus['name'] == name){
+                repeat = true;
               }
-              mens = acum.trim();
             });
-            
-            var resp = await insertToServerData(body, repeat, mens);
-            if(resp.body == true){
-              await admon.close();
-              return Response.ok(body);
+
+            if(!repeat){
+              String mens; 
+              await globalCollUser.insert(body);
+              await globalCollUser.find().forEach((data) {
+                bool capture = false;
+                String acum = '';
+                var aa = data['_id'].toString();
+                for(int i = 0; i < aa.length; i++){
+                  if(aa[i] == '('){
+                    capture = true;
+                  }
+                  else if (aa[i] == ')'){
+                    capture = false;
+                  }
+
+                  if(capture && aa[i] != '(' && aa[i] != ')' && aa[i] != '\"'){
+                    acum += aa[i];
+                  }
+                }
+                mens = acum.trim();
+              });
+              
+              var resp = await insertToServerData(body, repeat, mens);
+              if(resp.body == true){
+                await admon.close();
+                return Response.ok(body);
+              }
+              else{
+                await admon.close();
+                return Response.badRequest(body: {"Error": "datos no insertados en RuteroServer"});
+              }
             }
             else{
               await admon.close();
-              return Response.badRequest(body: {"Error": "datos no insertados en RuteroServer"});
+              return Response.badRequest(body: {"Error": "Ya existe un cliente con el mismo nombre"});
             }
           }
           else{
-            await admon.close();
-            return Response.badRequest(body: {"Error": "Ya existe un bus con el mismo nombre"});
+             await admon.close();
+             return Response.badRequest(body: {"Error": "El campo ruteros no debe tener ningun valor"});
           }
         }
         else{
           await admon.close();
-          return Response.badRequest(body: {"Error": "un dato esta vacio, verifica nuevamente la informacion"});
+          return Response.badRequest(body: {"Error": "un campo esta vacio, verifica nuevamente la informacion"});
         }
+        
       }
       else{
         await admon.close();
-          return Response.badRequest(body: {"Error": "un dato esta nulo, verifica nuevamente la informacion"});
+          return Response.badRequest(body: {"Error": "un campo esta nulo, verifica nuevamente la informacion"});
       }
 
     }
@@ -195,7 +202,7 @@ class UserConsult extends ResourceController {
       if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && routes != ""){
         if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && routes != null){
             await globalCollUser.find().forEach((data) async {
-              if(data['name'] == nm || data['_id'] == ObjectId.fromHexString(nm)){
+              if(data['name'] == nm || data['_id'] == ObjectId.fromHexString(nm) || data['_id'] == nm){
                 ready = true;
               }
             });
@@ -233,7 +240,7 @@ class UserConsult extends ResourceController {
                   }
                   else{
                     await globalCollUser.find().forEach((data) async {
-                      if(data['_id'] == ObjectId.fromHexString(nm)){
+                      if(data['_id'] == ObjectId.fromHexString(nm) || data['_id'] == nm){
                         var rut = data['ruteros'];
                         rut.add(newBody);
                         data['ruteros'] = rut;
@@ -247,9 +254,11 @@ class UserConsult extends ResourceController {
               var result = await insertInfoRuteroInServer(newBody, ready, nm, objectId);
 
               if(result.item1){
+                await admon.close();
                 return Response.ok(result.item2);
               }
               else{
+                await admon.close();
                 return Response.badRequest(body: {"info": "los datos no se pudieron guardar, intentalo nuevamente"});
               }
             }
@@ -297,102 +306,84 @@ class UserConsult extends ResourceController {
           await globalCollUser.find().forEach((data) async {
             if(data['ruteros'] != null && data['ruteros'].length != 0){
               for(var val in data['ruteros']){
-                if(val['id'] == ObjectId.fromHexString(idUpdate)){
-                  ready = true;
-                  // newBody = {
-                  //   'id': idUpdate,
-                  //   'name': name,
-                  //   'chasis': chasis,
-                  //   'PMR': pmr,
-                  //   'routeIndex': routeIndex,
-                  //   'status': status,
-                  //   'publicIP': publicIP,
-                  //   'sharedIP': sharedIP,
-                  //   'version': version,
-                  //   'appVersion': appVersion,
-                  //   'panic': panic,
-                  //   'routes': routes,
-                  // };
-                  // print(newBody);
+                if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
+                  dynamic ind;
+                  newBody = {
+                    'id': ObjectId.fromHexString(idUpdate),
+                    'name': name,
+                    'chasis': chasis,
+                    'PMR': pmr,
+                    'routeIndex': routeIndex,
+                    'status': status,
+                    'publicIP': publicIP,
+                    'sharedIP': sharedIP,
+                    'version': version,
+                    'appVersion': appVersion,
+                    'panic': panic,
+                    'routes': routes,
+                  };
 
-                  // var value2 = data['ruteros'];
-                  // if(value2 != null){
-                  //   int count = 0;
-                  //   var rut = value2;
-                    
-                  //   rut.add(newBody);
-                  //   val = rut;
-                  //   await globalCollUser.save(data);
-                  // }
+                  try{
+                    var value2 = data['ruteros'];
+                    value2.forEach((k){
+                      print(value2.indexOf(k));
+                      if(val['id'] == k['id']){
+                        ind = value2.indexOf(k);                        
+                      }
+                    });
 
-                  Map<String, dynamic> val1;
-                  if(val['name'] != name){
-                    try{
-                      print(val['name']);
-                      print(val['name'].toString());
-                      //await val.update(where.eq('name', val['name']), modify.set('name', name));
-                      var val1 = await globalCollUser.findOne({'ruteros': });
-                      val1['name'] = val['name'];
-                      await val.save(val1);
-                    }
-                    catch(e){
-                      print("Error $e");
+                    value2.removeAt(ind);
+
+                    if(value2 != null){
+                      var rut = value2;
+                      rut.add(newBody);
+                      val = rut;
+                      ready = true;
+                      await globalCollUser.save(data);
                     }
                   }
-                  if(val['chasis'] != chasis){
-                    //await val.update(where.eq('chasis', val['chasis']), modify.set('chasis', chasis));
-                    val1 = await globalCollUser.findOne(where.eq('chasis', val['chasis']));
-                    val.update(val1);
+                  catch(e){
+                    ready = false;
+                    print(e);
                   }
-                  if(val['PMR'] != pmr){
-                    //await val.update(where.eq('PMR', val['PMR']), modify.set('PMR', pmr));
-                    val1 = await globalCollUser.findOne(where.eq('PMR', val['PMR']));
-                    val.update(val1);
-                  }
-                  if(val['routeIndex'] != routeIndex){
-                    
-                  }
-                  if(val['status'] != status){
-                    
-                  }
-                  if(val['publicIP'] != publicIP){
-                    
-                  }
-                  if(val['sharedIP'] != sharedIP){
-                    
-                  }
-                  if(val['version'] != version){
-                    
-                  }
-                  if(val['appVersion'] != appVersion){
-                    
-                  }
-                  if(val['panic'] != panic){
-                    
-                  }
-                  if(val['routes'] != routes){
-                    
-                  }
-
-                  // for(var dt in rut){
-                  //   if(dt['id'] == ObjectId.fromHexString(idUpdate)){
-                  //     rut.removeAt(0);
+                  // Map<String, dynamic> val1;
+                  // if(val['name'] != name){
+                  //   try{
+                  //     print(val['name']);
+                  //     print(val['name'].toString());
+                  //     //await val.update(where.eq('name', val['name']), modify.set('name', name));
+                  //     var val1 = await val.findOne({'name': val['name']});
+                  //     //val1['name'] = val['name'];
+                  //     await val.save(val['name']);
                   //   }
-                  //   count++;
+                  //   catch(e){
+                  //     print("Error $e");
+                  //   }
                   // }
-
+                  // if(val['chasis'] != chasis){
+                  //   //await val.update(where.eq('chasis', val['chasis']), modify.set('chasis', chasis));
+                  //   val1 = await globalCollUser.findOne(where.eq('chasis', val['chasis']));
+                  //   val.update(val1);
+                  // }
+                  // if(val['PMR'] != pmr){
+                  //   //await val.update(where.eq('PMR', val['PMR']), modify.set('PMR', pmr));
+                  //   val1 = await globalCollUser.findOne(where.eq('PMR', val['PMR']));
+                  //   val.update(val1);
+                  // }
                 }
               }
             }
           });
 
-          bool result = await updateRuterosInToServer(newBody, idUpdate);
-
-          if(result){
-            return Response.ok("la informacion ha sido actualizada exitosamente");
+          
+          if(ready){
+            await updateRuterosInToServer(newBody, idUpdate);
+            await admon.close();
+            return Response.ok(newBody);
           }
           else{
-            return Response.badRequest(body: {"Error": "no hay informacion con este identificador"});
+            await admon.close();
+            return Response.badRequest(body: {"Error": "Este rutero no existe en la base de datos"});
           }
 
         }
@@ -412,50 +403,37 @@ class UserConsult extends ResourceController {
     }
   }
 
-
-
-
-
-
-
-
-  @Operation.delete('DeleteRuterosId')
+  @Operation.delete('DeleteRuterosId') //borra el rutero por medio de la id
   Future<Response> deleteRuteroForId(@Bind.path('DeleteRuterosId') String idDelete) async {
     try{
-      //change = false;
+      dynamic ind;
+      ready = false;
       await globalCollUser.find().forEach((data) async {
         for(var value in data['ruteros']){
-          if(data['id'] == ObjectId.fromHexString(idDelete)) {
-            var val1 = await globalCollUser.findOne(where.eq('name', value['name']));
-            var val2 = await globalCollUser.findOne(where.eq('chasis', value['chasis']));
-            var val3 = await globalCollUser.findOne(where.eq('PMR', value['PMR']));
-            var val4 = await globalCollUser.findOne(where.eq('routeIndex', value['routeIndex']));
-            var val5 = await globalCollUser.findOne(where.eq('status', value['status']));
-            var val6 = await globalCollUser.findOne(where.eq('publicIP', value['publicIP']));
-            var val7 = await globalCollUser.findOne(where.eq('sharedIP', value['sharedIP']));
-            var val8 = await globalCollUser.findOne(where.eq('version', value['version']));
-            var val9 = await globalCollUser.findOne(where.eq('appVersion', value['appVersion']));
-            var val10 = await globalCollUser.findOne(where.eq('panic', value['panic']));
-            var val11 = await globalCollUser.findOne(where.eq('routes', value['routes']));
-            await globalCollUser.remove(val1);
-            await globalCollUser.remove(val2);
-            await globalCollUser.remove(val3);
-            await globalCollUser.remove(val4);
-            await globalCollUser.remove(val5);
-            await globalCollUser.remove(val6);
-            await globalCollUser.remove(val7);
-            await globalCollUser.remove(val8);
-            await globalCollUser.remove(val9);
-            await globalCollUser.remove(val10);
-            await globalCollUser.remove(val11);
-            
+          if(value['id'] == ObjectId.fromHexString(idDelete) || value['id'] == idDelete) {
+            var vl = data['ruteros'];
+            vl.forEach((k){
+              print(vl.indexOf(k));
+              if(k['id'] == ObjectId.fromHexString(idDelete)){
+                ind = vl.indexOf(k);                    
+              }
+            });
+
+            vl.removeAt(ind);
+
+            if(vl != null){
+              var rut = vl;
+              //rut.add(newBody);
+              value = rut;
+              ready = true;
+              await globalCollUser.save(data);
+            }            
           }
         }
       });
 
-      bool result = await eraseRuteroInServer(idDelete);
-
-      if(result){
+      if(ready){
+        await eraseRuteroInServer(idDelete);
         await admon.close();
         return Response.ok("info: la informacion ha sido borrada exitosamente");
       }
@@ -463,26 +441,6 @@ class UserConsult extends ResourceController {
         await admon.close();
         return Response.badRequest(body: {"Error":"el dato no se pudo borrar, verifica nuevamente la informacion"});
       }
-
-
-      // if(change == true){
-      //   var val = await globalCollUser.findOne({"ruteros": []});
-      //   if(val != null){
-          
-      //   }
-      //   else{
-      //     await globalCollUser.find().forEach((data) async {
-      //       for(var value in data['ruteros']){
-      //         if(data['id'] == ObjectId.fromHexString(idDelete)) {
-      //           var val1 = await globalCollUser.findOne(where.eq('name', value['name']));
-      //           var val2 = await globalCollUser.findOne(where.eq('chasis', value['chasis']));
-      //           await globalCollUser.remove(val1);
-
-      //         }
-      //       }
-      //     });
-      //   }
-      // }
     }
     catch(e){
       await admon.close();
@@ -490,49 +448,96 @@ class UserConsult extends ResourceController {
     }
   }
 
-
-  @Operation.delete('DeleteClientId')
-  Future<Response> deleteClientForId(@Bind.path('DeleteClientId') String idDelete) async {
+  @Operation.delete('DeleteClientKey') //borra el cliente por medio de la id
+  Future<Response> deleteClientForId(@Bind.path('DeleteClientKey') String keyDelete) async {
+    dynamic ind;
+    ready = false;
+    int decision = 0;
     try{
+      await globalCollServer.find().forEach((data) async {
+        for(var result in data['users']){
+          try{
+            if(result['id'] == ObjectId.fromHexString(keyDelete) || result['id'] == keyDelete){
+              ready = true;
+              var vl = data['users'];
+              vl.forEach((k){
+                print(vl.indexOf(k));
+                if(k['id'] == ObjectId.fromHexString(keyDelete) || k['id'] == keyDelete){
+                  ind = vl.indexOf(k);                    
+                }
+              });
 
+              vl.removeAt(ind);
+
+              if(vl != null){
+                var rut = vl;
+                //rut.add(newBody);
+                result = rut;
+                ready = true;
+                decision = 1;
+                await globalCollServer.save(data);
+              }   
+            }
+          }
+          catch(e){
+            try{
+              if(result['name'] == keyDelete){
+                ready = true;
+                var vl = data['users'];
+                vl.forEach((k){
+                  print(vl.indexOf(k));
+                  if(k['name'] == keyDelete){
+                    ind = vl.indexOf(k);                    
+                  }
+                });
+
+                vl.removeAt(ind);
+
+                if(vl != null){
+                  var rut = vl;
+                  //rut.add(newBody);
+                  result = rut;
+                  ready = true;
+                  decision = 2;
+                  await globalCollServer.save(data);
+                }
+              }
+            }
+            catch(e){
+              print('Error: $e');
+            }
+          }
+        }
+      });
+
+      if(ready){
+        if(decision == 1){
+          await globalCollUser.remove(await globalCollUser.findOne({'_id': ObjectId.fromHexString(keyDelete)}));
+        }
+        else if (decision == 2){
+          await globalCollUser.remove(await globalCollUser.findOne({'name': keyDelete}));
+        }
+
+        if(decision == 1 || decision == 2){
+          await admon.close();
+          return Response.ok("info: el cliente ha sido borrado exitosamente");
+        }
+        else{
+          await admon.close();
+          return Response.badRequest(body: {"Error":"el cliente no existe en la base de datos"});
+        }
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"Error":"el cliente no existe en la base de datos"});
+      }
     }
     catch(e){
+      decision = 0;
       await admon.close();
       return Response.badRequest(body: {"Error": e.toString()});
     }
   }
-
-
-  // @Operation.delete('nameForDelete')
-  // Future<Response> deleteDataBus(@Bind.path('nameForDelete') String nm) async {
-  //   try{
-
-  //     change = false;
-  //     await globalCollUser.find().forEach((bus) {
-  //       if(bus['name'] == nm) {
-  //         change = true;
-  //       }
-  //     });
-
-  //     if(change){
-  //       var val = await globalCollUser.findOne(where.eq('name', nm));
-  //       await globalCollUser.remove(val);
-  //       return Response.ok("info: la informacion ha sido borrada exitosamente");
-  //     }
-  //     else{
-  //       return Response.badRequest(body: {"Error":"el dato no se pudo borrar, verifica nuevamente la informacion"});
-  //     }
-      
-  //   }
-  //   catch(e){
-  //     return Response.badRequest(body: {"Error": e.toString()});
-  //   }
-  // }
-
-
-  ////////////////////////////////////////////////////////////////////////////////////
-  
-
 
   //////////////////////////////////para servidor//////////////////////////////////////
   
@@ -609,34 +614,6 @@ class UserConsult extends ResourceController {
         return Response.badRequest(body: {'Error':'No se pudieron encontrar elementos para retornar'});
       }
       
-    }
-    catch(e){
-      await admon.close();
-      return Response.badRequest(body: {"Error": e.toString()});
-    }
-  }
-
-  @Operation.delete('identy') //falta probar esto
-  Future<Response> deleteUserByID(@Bind.path('identy') String id) async {
-    try{
-      change = false;
-      await globalCollServer.find().forEach((bus) async { //verifica si existe la informacion ingresada por la URL
-        for(var value in bus['users']){
-          if(value['id'] == id){
-            await globalCollServer.remove(await globalCollServer.findOne(where.eq('id', id)));
-            change = true;          
-          }
-        }
-      });
-
-      if(change){
-        await admon.close();
-        return Response.ok("info: la informacion ha sido borrada exitosamente");
-      }
-      else{
-        await admon.close();
-        return Response.badRequest(body: {"Error":"el dato no se pudo borrar, verifica nuevamente la informacion"});
-      }
     }
     catch(e){
       await admon.close();
@@ -741,62 +718,152 @@ class UserConsult extends ResourceController {
     }
   }
 
-  Future<bool> updateRuterosInToServer(Map<String, dynamic> newBody, String idUpdate) async {
-    print("actualizando datos del servidor");
+  Future<void> updateRuterosInToServer(Map<String, dynamic> newBody, String idUpdate) async {
     try{
-      await globalCollServer.find().forEach((data) {
+      Map<String, dynamic> newBody2;
+      await globalCollServer.find().forEach((data) async {
         for(var value in data['users']){
           for(var value2 in value['ruteros']){
-            if(value2['id'] == ObjectId.fromHexString(idUpdate)){ 
-              //falta reemplazar los datos
-              return true;
+            if(value2['id'] == ObjectId.fromHexString(idUpdate) || value2['id'] == idUpdate){
+              dynamic ind;
+              newBody2 = {
+                'id': ObjectId.fromHexString(idUpdate),
+                'name': newBody['name'],
+                'chasis': newBody['chasis'],
+                'PMR': newBody['PMR'],
+                'routeIndex': newBody['routeIndex'],
+                'status': newBody['status'],
+                'publicIP': newBody['publicIP'],
+                'sharedIP': newBody['sharedIP'],
+                'version': newBody['version'],
+                'appVersion': newBody['appVersion'],
+                'panic': newBody['panic'],
+                'routes': newBody['routes'],
+              };
+
+              var value3 = value['ruteros'];
+              value3.forEach((k){
+                print(value3.indexOf(k));
+                if(value2['id'] == k['id']){
+                  ind = value3.indexOf(k);                        
+                }
+              });
+
+              value3.removeAt(ind);
+
+              if(value3 != null){
+                var rut = value3;
+                rut.add(newBody);
+                value3 = rut;
+                await globalCollServer.save(data);
+              }
             }
           }
         }
       });
     }
     catch(e){
-      return false;
+      print(e);
     }
   }
 
   Future<bool> eraseRuteroInServer(String idDelete) async{
     try{
+      bool save = false;
       await globalCollServer.find().forEach((data) async {
         for(var value in data['users']){
           for(var value2 in value['ruteros']){
-              if(value2['id'] == ObjectId.fromHexString(idDelete)) {
-                var val1 = await globalCollUser.findOne(where.eq('name', value2['name']));
-                var val2 = await globalCollUser.findOne(where.eq('chasis', value2['chasis']));
-                var val3 = await globalCollUser.findOne(where.eq('PMR', value2['PMR']));
-                var val4 = await globalCollUser.findOne(where.eq('routeIndex', value2['routeIndex']));
-                var val5 = await globalCollUser.findOne(where.eq('status', value2['status']));
-                var val6 = await globalCollUser.findOne(where.eq('publicIP', value2['publicIP']));
-                var val7 = await globalCollUser.findOne(where.eq('sharedIP', value2['sharedIP']));
-                var val8 = await globalCollUser.findOne(where.eq('version', value2['version']));
-                var val9 = await globalCollUser.findOne(where.eq('appVersion', value2['appVersion']));
-                var val10 = await globalCollUser.findOne(where.eq('panic', value2['panic']));
-                var val11 = await globalCollUser.findOne(where.eq('routes', value2['routes']));
-                await globalCollUser.remove(val1);
-                await globalCollUser.remove(val2);
-                await globalCollUser.remove(val3);
-                await globalCollUser.remove(val4);
-                await globalCollUser.remove(val5);
-                await globalCollUser.remove(val6);
-                await globalCollUser.remove(val7);
-                await globalCollUser.remove(val8);
-                await globalCollUser.remove(val9);
-                await globalCollUser.remove(val10);
-                await globalCollUser.remove(val11);
-                
-              }
+            if(value2['id'] == ObjectId.fromHexString(idDelete)) {
+              dynamic ind;
+              var value3 = value['ruteros'];
+              value3.forEach((k){
+                if(value2['id'] == k['id']){
+                  ind = value3.indexOf(k);                        
+                }
+              });
+
+              value3.removeAt(ind);
+
+              if(value3 != null){
+                var rut = value3;
+                //rut.add(newBody);
+                value3 = rut;
+                save = true;
+                await globalCollServer.save(data);
+              }                
+            }
           }
         }
       });
-      return true;
+
+      if(save){
+        return save;
+      }
+      else{
+        return save;
+      }
+      
     }
     catch(e){
       return false;
     }
   }
+
+  Future<void> deleteClientInUsuario(String idDelete) async {
+    try{
+      
+    }
+    catch(e){
+      print(e);
+    }
+  }
+
+  Future<void> deleteClientInUsuario2(String nameDelete) async { //FALTA TERMINAR ACA
+    try{
+      dynamic ind;
+      bool getData = true;
+      dynamic store = [];
+      Map<String, dynamic> data2;
+
+      await globalCollUser.find().forEach((data) async {
+        if(getData)
+        {
+          getData = false;
+          data2 = data;
+        }
+        store.add(data);
+      });
+
+      // await globalCollUser.getIndexes().then((data) async {
+      //   print('Se tiene: $data');
+      // });
+
+      store.forEach((element) {
+        print(element); 
+        print(store.indexOf(element));
+        if(element['name'] == nameDelete){
+          ind = store.indexOf(element);
+        }
+      });
+
+      store.removeAt(ind);
+
+      // data2 = {
+      //   store,
+      // };
+      // print(data2);
+
+      if(store != null){
+        var rut = store;
+        //rut.add(newBody);
+        store = rut;
+        ready = true;
+        await globalCollUser.insert(data2);
+      }  
+    }
+    catch(e){
+      print(e);
+    }
+  }
+
 }

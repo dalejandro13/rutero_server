@@ -1,6 +1,5 @@
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:rutero_server/adminDB.dart';
-import 'package:rutero_server/serverConsult.dart';
 import 'package:rutero_server/userConsult.dart';
 import 'package:rutero_server/variables.dart';
 import 'rutero_server.dart';
@@ -75,59 +74,56 @@ class RuteroServerChannel extends ApplicationChannel {
 
     ///////////////consulta con Usuarios//////////////
         
-    //consultar todos los ruteros con id de empresa //LISTO
+    //consultar todos los ruteros con id de empresa //LISTO //LISTO
     router
-      .route("$urlBase/GetUserByID/[:id]")
+      .route("$urlBase/GetRuterosByID/[:id]")
       .link(() => UserConsult());
     
-    //consultar todos los ruteros por el nombre de la empresa //LISTO
+    //consultar todos los ruteros por el nombre de la empresa //LISTO //LISTO
     router
-      .route("$urlBase/GetUserByName/[:name]")
+      .route("$urlBase/GetRuterosByName/[:name]")
       .link(() => UserConsult());
 
-    //ingresa un nuevo cliente si no existe (post) //LISTO
+    //ingresa un nuevo cliente si no existe (post) //LISTO //LISTO
     router
       .route("$urlBase/CreateClient")
       .link(() => UserConsult());
 
-    //insertar informacion en la lista de ruteros si el nombre coincide (put) //LISTO
+    //insertar informacion en la lista de ruteros si el nombre o la id coincide (put) //LISTO //LISTO
     router
-      .route("$urlBase/InsertDataRuteros/[:nme]")
+      .route("$urlBase/InsertDataRuteros/[:nameorid]")
       .link(() => UserConsult());
 
-    //actualizar informacion acerca de los ruteros (put) //LISTO
+    //actualizar informacion acerca de los ruteros (put) //LISTO //LISTO
     router
       .route("$urlBase/UpdateDataRuteros/[:idupdate]")
       .link(() => UserConsult());
 
-
-    //borra rutero por medio de la id //LISTO
+    //borra rutero por medio de su id (delete) //LISTO //LISTO
     router
       .route("$urlBase/DeleteRuterosById/[:DeleteRuterosId]")
       .link(() => UserConsult());
 
-    //borra el cliente por medio su id o por su nombre//
+    //borra el cliente por medio su id o por su nombre (delete) //LISTO //LISTO
     router
       .route("$urlBase/DeleteClient/[:DeleteClientKey]")
       .link(() => UserConsult());
 
-
     ////////////consulta con RuteroServer//////////////
     //consulta toda la base de datos
     router
-      .route("$urlBase/[:num]")
+      .route("$urlBase/[:num]") //LISTO //LISTO
       .link(() => UserConsult());
 
-    //consultar rutero por medio de su id
+    //consultar rutero especifico por medio de su id
     router
-      .route("$urlBase/GetRuteroByID/[:ident]")
+      .route("$urlBase/GetRutById/[:ident]") 
       .link(() => UserConsult());
 
-    //consultar rutero por su nombre
-    router
-      .route("$urlBase/GetRuteroByName/[:nm]")
-      .link(() => UserConsult());
-    
+    //consultar todos los ruteros por el nombre del cliente o por el id del cliente
+    // router
+    //   .route("$urlBase/GetAllRuterosByNameOrId/[:nm]")
+    //   .link(() => UserConsult());
 
     return router;
   }

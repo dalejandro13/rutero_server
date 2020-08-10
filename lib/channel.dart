@@ -74,37 +74,37 @@ class RuteroServerChannel extends ApplicationChannel {
 
     ///////////////consulta con Usuarios//////////////
         
-    //consultar todos los ruteros con id de empresa //LISTO //LISTO
+    //consultar todos los ruteros con id de empresa
     router
       .route("$urlBase/GetRuterosByID/[:id]")
       .link(() => UserConsult());
     
-    //consultar todos los ruteros por el nombre de la empresa //LISTO //LISTO
+    //consultar todos los ruteros por el nombre de la empresa
     router
       .route("$urlBase/GetRuterosByName/[:name]")
       .link(() => UserConsult());
 
-    //ingresa un nuevo cliente si no existe (post) //LISTO //LISTO
+    //ingresa un nuevo cliente si no existe (post)
     router
       .route("$urlBase/CreateClient")
       .link(() => UserConsult());
 
-    //insertar informacion en la lista de ruteros si el nombre o la id coincide (put) //LISTO //LISTO
+    //insertar informacion en la lista de ruteros si el nombre o la id coincide (put)
     router
       .route("$urlBase/InsertDataRuteros/[:nameorid]")
       .link(() => UserConsult());
 
-    //actualizar informacion acerca de los ruteros (put) //LISTO //LISTO
+    //actualizar informacion acerca de los ruteros (put)
     router
       .route("$urlBase/UpdateDataRuteros/[:idupdate]")
       .link(() => UserConsult());
 
-    //borra rutero por medio de su id (delete) //LISTO //LISTO
+    //borra rutero por medio de su id (delete)
     router
       .route("$urlBase/DeleteRuterosById/[:DeleteRuterosId]")
       .link(() => UserConsult());
 
-    //borra el cliente por medio su id o por su nombre (delete) //LISTO //LISTO
+    //borra el cliente por medio su id o por su nombre (delete)
     router
       .route("$urlBase/DeleteClient/[:DeleteClientKey]")
       .link(() => UserConsult());
@@ -112,18 +112,13 @@ class RuteroServerChannel extends ApplicationChannel {
     ////////////consulta con RuteroServer//////////////
     //consulta toda la base de datos
     router
-      .route("$urlBase/[:num]") //LISTO //LISTO
+      .route("$urlBase/[:num]")
       .link(() => UserConsult());
 
     //consultar rutero especifico por medio de su id
     router
       .route("$urlBase/GetRutById/[:ident]") 
       .link(() => UserConsult());
-
-    //consultar todos los ruteros por el nombre del cliente o por el id del cliente
-    // router
-    //   .route("$urlBase/GetAllRuterosByNameOrId/[:nm]")
-    //   .link(() => UserConsult());
 
     return router;
   }

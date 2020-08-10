@@ -564,37 +564,6 @@ class UserConsult extends ResourceController {
     }
   }
 
-  // @Operation.get('nm') //buscar ruteros por nombre del cliente o por el id del cliente
-  // Future<Response> getByNameServer(@Bind.path('nm') String nameOrId) async {
-  //   try{
-  //     var busesList = [];
-  //     await globalCollServer.find().forEach((bus) {
-  //       // ignore: prefer_foreach
-  //       for(var value in bus['users']){
-  //         for(var value2 in value['ruteros']){
-  //           if(value['name'] == nameOrId || value['id'] == ObjectId.fromHexString(nameOrId) || value['id'] == nameOrId){
-  //             busesList.add(value2);
-  //           }
-  //         }       
-  //       }
-  //     });
-
-  //     if(busesList.length > 0){
-  //       await admon.close();
-  //       return Response.ok(busesList);
-  //     }
-  //     else{
-  //       await admon.close();
-  //       return Response.badRequest(body: {'ERROR':'No se pudieron encontrar elementos para retornar'});
-  //     }
-      
-  //   }
-  //   catch(e){
-  //     await admon.close();
-  //     return Response.badRequest(body: {"ERROR": e.toString()});
-  //   }
-  // }
-
   /////////////////////////////////////////////////////////////////////////////////////
   ///
   Future<bool> insertToServerData(Map<String, dynamic> body, bool repeat, String mens) async {

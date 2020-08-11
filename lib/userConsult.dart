@@ -5,23 +5,47 @@ import 'package:rutero_server/rutero_server.dart';
 import 'dart:developer' as dev;
 
 class UserConsult extends ResourceController {
-  DbCollection globalCollUser;
-  DbCollection globalCollServer;
+  DbCollection globalCollUser, globalCollServer, globalCollDevice;
   AdmonDB admon = AdmonDB();
   bool change = false;
   bool ready = false;
+  int numVer, numVer2, numAppVer, numAppVer2, step;
+  int numBun, numBun2, numAppBun, numAppBun2;
+  int numCom, numCom2, numAppCom, numAppCom2;
   UserConsult(){
     connectRuteros();
   }
 
   void connectRuteros() async {
     await admon.connectToRuteroServer().then((datab) {
-      globalCollUser = datab.collection('Usuario');
-      globalCollServer = datab.collection('RuteroServer');
+      globalCollUser = datab.collection('user');
+      globalCollServer = datab.collection('serverApp');
+      globalCollDevice = datab.collection('device');
     });   
   }
 
   //////////////////////////////para Usuarios/////////////////////////////////////////
+  
+  @Operation.get()
+  Future<Response> getDataInDevice() async {
+    try{
+      var busesList = [];
+      await globalCollDevice.find().forEach(busesList.add);
+      
+      if(busesList.length > 0){
+        await admon.close();
+        return Response.ok(busesList);
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "No hay informacion en Usuarios"});
+      }
+    }
+    catch(e){
+      await admon.close();
+      return Response.badRequest(body: {"ERROR": e.toString()});
+    }
+  }
   
   @Operation.get('id')
   Future<Response> getUser(@Bind.path('id') String id) async {
@@ -212,7 +236,7 @@ class UserConsult extends ResourceController {
                   var rut = value2;
                   rut.add(newBody);
                   value2 = rut;
-                  await globalCollUser.save(value); //no olvidar descomentar esto
+                  await globalCollUser.save(value);
                 }
                 else{
                   await globalCollUser.find().forEach((data) async {
@@ -220,7 +244,7 @@ class UserConsult extends ResourceController {
                       var rut = data['ruteros'];
                       rut.add(newBody);
                       data['ruteros'] = rut;
-                      await globalCollUser.save(data); //no olvidar descomentar esto
+                      await globalCollUser.save(data);
                     }
                   });
                 }
@@ -343,6 +367,7 @@ class UserConsult extends ResourceController {
                     ready = false;
                     print(e);
                   }
+
                 }
               }
             }
@@ -397,6 +422,7 @@ class UserConsult extends ResourceController {
               value = rut;
               ready = true;
               await globalCollUser.save(data);
+              await globalCollDevice.remove(await globalCollDevice.findOne({'id': ObjectId.fromHexString(idDelete)}));
             }            
           }
         }
@@ -418,7 +444,7 @@ class UserConsult extends ResourceController {
     }
   }
 
-  @Operation.delete('DeleteClientKey') //borra el cliente por medio de la id
+  @Operation.delete('DeleteClientKey') //borra el cliente por medio de la id o por el nombre
   Future<Response> deleteClientForId(@Bind.path('DeleteClientKey') String keyDelete) async {
     dynamic ind;
     ready = false;
@@ -443,12 +469,12 @@ class UserConsult extends ResourceController {
                 result = rut;
                 ready = true;
                 decision = 1;
-                await globalCollServer.save(data);
+                await globalCollServer.save(data); 
               }   
             }
           }
           catch(e){
-            try{
+            try{ 
               if(result['name'] == keyDelete){
                 ready = true;
                 var vl = data['users'];
@@ -479,9 +505,12 @@ class UserConsult extends ResourceController {
 
       if(ready){
         if(decision == 1){
+          await deleteInDeviceDb(keyDelete, decision);
           await globalCollUser.remove(await globalCollUser.findOne({'_id': ObjectId.fromHexString(keyDelete)})); //borra en base de datos Usuarios por medio de su id
+          
         }
         else if (decision == 2){
+          await deleteInDeviceDb(keyDelete, decision);
           await globalCollUser.remove(await globalCollUser.findOne({'name': keyDelete})); //borra en base de datos Usuarios por medio de su nombre
         }
 
@@ -504,6 +533,205 @@ class UserConsult extends ResourceController {
       await admon.close();
       return Response.badRequest(body: {"ERROR": e.toString()});
     }
+  }
+
+  @Operation.put('version')
+  Future<Response> updateVersion(@Bind.path('version') String getVersion) async {
+    Map<String, dynamic> ver;
+    String getVersionBody = "";
+    String getVersionDB = "";
+    final Map<String, dynamic> body = await request.body.decode();
+    final version = body['version'];
+    String acum = "", numVersion = "", numBundle = "", numCompilado = ""; //numero de version . numero de bundle . numero de compilado
+    String numVersion2 = "", numBundle2 = "", numCompilado2 = "";
+    try{
+      if(version != "" && version != null){
+        await globalCollServer.find().forEach((data) async {
+          String versionDB = data['version'].toString();
+          String versionBody = version.toString();
+          for(int i = 0; i < versionDB.length; i++){
+            if(versionDB[i] == "."){
+              if(numVersion == ""){
+                numVersion = acum;
+                acum = "";
+              }
+              else if(numBundle == "" && numVersion != ""){
+                numBundle = acum;
+                acum = "";
+              }
+            }
+            else{
+              acum += versionDB[i];
+            }
+          }
+          if(numCompilado == "" && numVersion != "" && numBundle != ""){
+            numCompilado = acum;
+            acum = "";
+          }
+
+          for(int j = 0; j < versionBody.length; j++){
+            if(versionBody[j] == "."){
+              if(numVersion2 == ""){
+                numVersion2 = acum;
+                acum = "";
+              }
+              else if(numBundle2 == "" && numVersion2 != ""){
+                numBundle2 = acum;
+                acum = "";
+              }
+            }
+            else{
+              acum += versionBody[j];
+            }
+          }
+          if(numCompilado2 == "" && numVersion2 != "" && numBundle2 != ""){
+            numCompilado2 = acum;
+            acum = "";
+          }
+          step = 0;
+          //viene de la base de datos
+          numVer = int.parse(numVersion);
+          numBun = int.parse(numBundle);
+          numCom = int.parse(numCompilado);
+
+          //viene de Body
+          numVer2 = int.parse(numVersion2);
+          numBun2 = int.parse(numBundle2);
+          numCom2 = int.parse(numCompilado2);
+
+          if(numCom2 > numCom){
+            step++;
+          }
+          if(numBun2 > numBun){
+            step++;
+          }
+          if(numVer2 > numVer){
+            step++;
+          }
+        });
+
+        if(step >= 1 && step <= 3){
+          step = 0;
+          getVersionBody = "$numVer2.$numBun2.$numCom2";
+          getVersionDB = "$numVer.$numBun.$numCom";
+          await changeVersion(1, body, getVersionBody, getVersionDB);
+        }
+        if(getVersionBody != ""){
+          return Response.ok(getVersionBody);
+        }
+        else{
+          return Response.badRequest(body: {"ERROR": "no se actualizo la version"});
+        }
+      }
+      else{
+        return Response.badRequest(body: {"ERROR": "falta ingresar la informacion de la Version"});
+      }
+    }
+    catch(e){
+      print(e);
+      return Response.badRequest(body: {"ERROR": "intentalo nuevamente"});
+    }
+  }
+
+  @Operation.put('appversion')
+  Future<Response> updateAppVersion(@Bind.path('appversion') String getAppVersion) async {
+    Map<String, dynamic> appVer;
+    String getAppVersionBody = "";
+    String getAppVersionDB = "";
+    final Map<String, dynamic> body = await request.body.decode();
+    final appVersion = body['appVersion'];
+    String acum = "", numAppVersion = "", numAppBundle = "", numAppCompilado = ""; //numero de version . numero de bundle . numero de compilado
+    String numAppVersion2 = "", numAppBundle2 = "", numAppCompilado2 = "";
+    try{
+      if(appVersion != "" && appVersion != null){
+        await globalCollServer.find().forEach((data) async {
+          String appVersionDB = data['appVersion'].toString();
+          String appVersionBody = appVersion.toString();
+
+          for(int i = 0; i < appVersionDB.length; i++){
+            if(appVersionDB[i] == "."){
+              if(numAppVersion == ""){
+                numAppVersion = acum;
+                acum = "";
+              }
+              else if(numAppBundle == "" && numAppVersion != ""){
+                numAppBundle = acum;
+                acum = "";
+              }
+            }
+            else{
+              acum += appVersionDB[i];
+            }
+          }
+          if(numAppCompilado == "" && numAppVersion != "" && numAppBundle != ""){
+            numAppCompilado = acum;
+            acum = "";
+          }
+
+          for(int j = 0; j < appVersionBody.length; j++){
+            if(appVersionBody[j] == "."){
+              if(numAppVersion2 == ""){
+                numAppVersion2 = acum;
+                acum = "";
+              }
+              else if(numAppBundle2 == "" && numAppVersion2 != ""){
+                numAppBundle2 = acum;
+                acum = "";
+              }
+            }
+            else{
+              acum += appVersionBody[j];
+            }
+          }
+          if(numAppCompilado2 == "" && numAppVersion2 != "" && numAppBundle2 != ""){
+            numAppCompilado2 = acum;
+            acum = "";
+          }
+          step = 0;
+
+          //viene de la base de datos
+          numAppVer = int.parse(numAppVersion);
+          numAppBun = int.parse(numAppBundle);
+          numAppCom = int.parse(numAppCompilado);
+
+          //viene del Body
+          numAppVer2 = int.parse(numAppVersion2);
+          numAppBun2 = int.parse(numAppBundle2);
+          numAppCom2 = int.parse(numAppCompilado2);
+
+          if(numAppCom2 > numAppCom){
+            step++;
+          }
+          if(numAppBun2 > numAppBun){
+            step++;
+          }
+          if(numAppVer2 > numAppVer){
+            step++;
+          }
+        });
+
+        if(step >= 1 && step <= 3){
+          step = 0;
+          getAppVersionBody = "$numAppVer2.$numAppBun2.$numAppCom2";
+          getAppVersionDB = "$numAppVer.$numAppBun.$numAppCom";
+          await changeVersion(2, body, getAppVersionBody, getAppVersionDB);
+        }
+        if(getAppVersionBody != ""){
+          return Response.ok(getAppVersionBody);
+        }
+        else{
+          return Response.badRequest(body: {"ERROR": "no se actualizo la appVersion"});
+        }
+      }
+      else{
+        return Response.badRequest(body: {"ERROR": "falta ingresar la informacion de la appVersion"});
+      }
+    }
+    catch(e){
+      print(e);
+      return Response.badRequest(body: {"ERROR": "intentalo nuevamente"});
+    }
+    
   }
 
   //////////////////////////////////para servidor//////////////////////////////////////
@@ -578,6 +806,10 @@ class UserConsult extends ResourceController {
             'ruteros': body['ruteros'],
           };
 
+          Map<String, dynamic> body2 = {
+            'ruteros': body['ruteros'],
+          };
+
           var value = await globalCollServer.findOne({"users": []});
           if(value != null){
             var rut = value['users'];
@@ -594,6 +826,18 @@ class UserConsult extends ResourceController {
               await globalCollServer.save(data);
             });
             ready = true;
+          }
+
+          if(ready){
+            bool getData = false;
+            await globalCollDevice.find().forEach((data) async {
+              var dd = data['ruteros'];
+              getData = true;
+            });
+
+            if(!getData){
+              await globalCollDevice.insert(body2);
+            }
           }
 
           if(ready){
@@ -615,6 +859,7 @@ class UserConsult extends ResourceController {
 
   Future<Tuple2<bool, Map<String, dynamic>>> insertInfoRuteroInServer(Map<String, dynamic> body, bool start, String nameClient, ObjectId objectId) async {
     ready = false;
+    bool ready2 = false;
     Map<String, dynamic> newBody;
     try{
       await globalCollServer.find().forEach((data) {
@@ -651,7 +896,17 @@ class UserConsult extends ResourceController {
       });
 
       if(ready){
-        return Tuple2(ready, newBody);
+        await globalCollDevice.find().forEach((value) async { 
+          var rut = value['ruteros'];
+          rut.add(newBody);
+          value['ruteros'] = rut;
+          ready2 = true;
+          await globalCollDevice.save(value);
+        });
+      }
+
+      if(ready2){
+        return Tuple2(ready2, newBody);
       }
       else{
         return Tuple2(false, newBody);
@@ -665,11 +920,13 @@ class UserConsult extends ResourceController {
   Future<void> updateRuterosInToServer(Map<String, dynamic> newBody, String idUpdate) async {
     try{
       Map<String, dynamic> newBody2;
+      dynamic ind, vl, ind2;
+
       await globalCollServer.find().forEach((data) async {
         for(var value in data['users']){
           for(var value2 in value['ruteros']){
             if(value2['id'] == ObjectId.fromHexString(idUpdate) || value2['id'] == idUpdate){
-              dynamic ind;
+              
               newBody2 = {
                 'id': ObjectId.fromHexString(idUpdate),
                 'name': newBody['name'],
@@ -704,6 +961,33 @@ class UserConsult extends ResourceController {
           }
         }
       });
+
+      await globalCollDevice.find().forEach((data) async { //actualiza datos en device
+        try{
+          vl = data['ruteros'];
+          vl.forEach((k){
+            if(k['id'] == ObjectId.fromHexString(idUpdate)){
+              ind2 = vl.indexOf(k);
+            }
+          });
+
+          vl.removeAt(ind2);
+
+          if(vl != null){
+            var rut = vl;
+            rut.add(newBody);
+            vl = rut;
+            await globalCollDevice.save(data); 
+          }
+        }
+        catch(e){
+          print(e);
+        }
+
+
+        //await globalCollDevice.remove(await globalCollDevice.findOne({'id': ObjectId.fromHexString(idUpdate)})); //borra en base de datos Usuarios por medio de su id
+        //await globalCollDevice.save(newBody);
+      });
     }
     catch(e){
       print(e);
@@ -712,12 +996,13 @@ class UserConsult extends ResourceController {
 
   Future<bool> eraseRuteroInServer(String idDelete) async{
     try{
-      bool save = false;
+      bool save = false, save2 = false;
+      dynamic ind, ind2, vl;
       await globalCollServer.find().forEach((data) async {
         for(var value in data['users']){
           for(var value2 in value['ruteros']){
             if(value2['id'] == ObjectId.fromHexString(idDelete)) {
-              dynamic ind;
+              
               var value3 = value['ruteros'];
               value3.forEach((k){
                 if(value2['id'] == k['id']){
@@ -739,15 +1024,150 @@ class UserConsult extends ResourceController {
       });
 
       if(save){
-        return save;
+        await globalCollDevice.find().forEach((data) async {
+          try{
+            vl = data['ruteros'];
+            vl.forEach((k){
+              if(k['id'] == ObjectId.fromHexString(idDelete)){
+                ind2 = vl.indexOf(k);
+              }
+            });
+
+            vl.removeAt(ind2);
+
+            if(vl != null){
+              var rut = vl;
+              vl = rut;
+              save2 = true;
+              await globalCollDevice.save(data); 
+            }
+          }
+          catch(e){
+            print(e);
+          }
+        });
+      }
+
+      if(save2){
+        return save2;
       }
       else{
-        return save;
+        return save2;
       }
       
     }
     catch(e){
       return false;
+    }
+  }
+
+  Future<void> deleteInDeviceDb(String keyDelete, int decision) async {
+    var listOfId = [];
+    dynamic ind;
+
+    await globalCollUser.find().forEach((data) async {
+      if(decision == 1){ //busqueda por id
+        try{
+          if(data['_id'] == ObjectId.fromHexString(keyDelete) || data['_id'] == keyDelete){
+            var vl = data['ruteros'];
+            vl.forEach((k){
+              listOfId.add(k['id']);
+            }); 
+          }
+        }
+        catch(e){
+          print('ERROR: $e');
+          await admon.close();
+        }
+      }
+      else if(decision == 2){ //busqueda por nombre
+        try{ 
+          if(data['name'] == keyDelete){
+            var vl = data['ruteros'];
+            vl.forEach((k){
+              listOfId.add(k['id']);
+            });
+          }
+        }
+        catch(e){
+          print('ERROR: $e');
+          await admon.close();
+        }
+      }
+    });
+
+    if(listOfId.length > 0){
+      int numb = 0;
+      var value = await globalCollDevice.findOne({"ruteros":  [ ]});
+      if(value != null){
+        print("esta vacio");
+      }
+      else{
+        await eliminateId(listOfId, 0, ind);
+      }
+    }
+  }
+
+  Future<void> changeVersion(int whatVersion, Map<String, dynamic> body, String getVersionBody, String getVersionDB) async {
+    //Buscar updateRuterosInToServer
+    dynamic ind;
+    print(getVersionBody);
+    print(getVersionDB);
+
+    if(whatVersion == 1){
+      try{
+        var v1 = await globalCollServer.findOne({"version": getVersionDB});
+        v1["version"] = getVersionBody;
+        await globalCollServer.save(v1);
+      }
+      catch(e){
+        print(e);
+      }
+    }
+    else if(whatVersion == 2){
+      try{
+        var v1 = await globalCollServer.findOne({"appVersion": getVersionDB});
+        v1["appVersion"] = getVersionBody;
+        await globalCollServer.save(v1);
+      }
+      catch(e){
+        print(e);
+      }
+    }
+  }
+
+  Future<void> eliminateId(List<dynamic> listId, int i, dynamic ind) async{
+    var id = listId[i];
+    await globalCollDevice.find().forEach((data) async {
+      try{
+        var value2 = data['ruteros'];
+        value2.forEach((k){
+          if(id == k['id']){
+            ind = value2.indexOf(k);                        
+          }
+        });
+
+        value2.removeAt(ind);
+
+        if(value2 != null){
+          var rut = value2;
+          //rut.add(newBody);
+          value2 = rut;
+          //print(data);
+          //ready = true;
+          //i = 0;
+          await globalCollDevice.save(data);
+        }
+      }
+      catch(e){
+        ready = false;
+        print(e);
+      }
+    });
+
+    i++;
+    if(i < listId.length){
+      await eliminateId(listId, i, ind);
     }
   }
 }

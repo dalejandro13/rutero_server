@@ -23,6 +23,7 @@ class RuteroServerChannel extends ApplicationChannel {
     variables = Variables();
     urlBase = "Api/FlexoRuteros/Buses";
     //connectRuteros();
+    //"http://localhost:9742/Api/FlexoRuteros/Buses/GetAllDevices/[:idDevice]"
   }
 
   // void connectRuteros() async {
@@ -73,40 +74,55 @@ class RuteroServerChannel extends ApplicationChannel {
 
 
     ///////////////consulta con Usuarios//////////////
+    
+    //consultar todos los ruteros en device
+    router
+      .route("$urlBase/GetAllDevices/[:idDevice]") //LISTO
+      .link(() => UserConsult());
         
     //consultar todos los ruteros con id de empresa
     router
-      .route("$urlBase/GetRuterosByID/[:id]")
+      .route("$urlBase/GetRuterosById/[:id]") //LISTO
       .link(() => UserConsult());
     
     //consultar todos los ruteros por el nombre de la empresa
     router
-      .route("$urlBase/GetRuterosByName/[:name]")
+      .route("$urlBase/GetRuterosByName/[:name]") //LISTO
       .link(() => UserConsult());
 
     //ingresa un nuevo cliente si no existe (post)
     router
-      .route("$urlBase/CreateClient")
+      .route("$urlBase/CreateClient") //LISTO
       .link(() => UserConsult());
 
     //insertar informacion en la lista de ruteros si el nombre o la id coincide (put)
     router
-      .route("$urlBase/InsertDataRuteros/[:nameorid]")
+      .route("$urlBase/InsertDataRuteros/[:nameorid]") //LISTO
       .link(() => UserConsult());
 
     //actualizar informacion acerca de los ruteros (put)
     router
-      .route("$urlBase/UpdateDataRuteros/[:idupdate]")
+      .route("$urlBase/UpdateDataRuteros/[:idupdate]") //LISTO
       .link(() => UserConsult());
 
     //borra rutero por medio de su id (delete)
     router
-      .route("$urlBase/DeleteRuterosById/[:DeleteRuterosId]")
+      .route("$urlBase/DeleteRuterosById/[:DeleteRuterosId]") //LISTO
       .link(() => UserConsult());
 
     //borra el cliente por medio su id o por su nombre (delete)
     router
-      .route("$urlBase/DeleteClient/[:DeleteClientKey]")
+      .route("$urlBase/DeleteClient/[:DeleteClientKey]") //FALTA CORREGIR ALGO
+      .link(() => UserConsult());
+
+    //actualiza la version
+    router
+      .route("$urlBase/UpdateVersion/[:version]") //LISTO
+      .link(() => UserConsult());
+
+    //actualiza la version de la app
+    router
+      .route("$urlBase/UpdateAppVersion/[:appversion]") //LISTO
       .link(() => UserConsult());
 
     ////////////consulta con RuteroServer//////////////

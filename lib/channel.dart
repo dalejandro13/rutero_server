@@ -21,7 +21,7 @@ class RuteroServerChannel extends ApplicationChannel {
 
   RuteroServerChannel(){
     variables = Variables();
-    urlBase = "Api/FlexoRuteros/Buses";
+    urlBase = "Api/FlexoRuteros";
     //connectRuteros();
     //"http://localhost:9742/Api/FlexoRuteros/Buses/GetAllDevices/[:idDevice]"
   }
@@ -77,64 +77,64 @@ class RuteroServerChannel extends ApplicationChannel {
     
     //consultar todos los ruteros en device
     router
-      .route("$urlBase/GetAllDevices/[:idDevice]") //LISTO
+      .route("$urlBase/Devices/") //LISTO
       .link(() => UserConsult());
         
     //consultar todos los ruteros con id de empresa
     router
-      .route("$urlBase/GetRuterosById/[:id]") //LISTO
+      .route("$urlBase/Devices/GetUserID/[:id]") //LISTO
       .link(() => UserConsult());
     
     //consultar todos los ruteros por el nombre de la empresa
     router
-      .route("$urlBase/GetRuterosByName/[:name]") //LISTO
+      .route("$urlBase/Devices/GetByUserName/[:name]") //LISTO
       .link(() => UserConsult());
 
-    //ingresa un nuevo cliente si no existe (post)
+    // ingresa un nuevo usuario si no existe (post)
     router
-      .route("$urlBase/CreateClient") //LISTO
+      .route("$urlBase/Users/") //LISTO
       .link(() => UserConsult());
 
-    //insertar informacion en la lista de ruteros si el nombre o la id coincide (put)
+    // insertar un nuevo rutero, si el nombre o la id coincide con el del usuario almacenado en la base de datos (post)
     router
-      .route("$urlBase/InsertDataRuteros/[:nameorid]") //LISTO
+      .route("$urlBase/Devices/CreateInUser/[:nameorid]") //LISTO //CONTINUA ACA
       .link(() => UserConsult());
 
-    //actualizar informacion acerca de los ruteros (put)
-    router
-      .route("$urlBase/UpdateDataRuteros/[:idupdate]") //LISTO
-      .link(() => UserConsult());
+    // actualizar informacion acerca de los ruteros (put)
+    // router
+    //   .route("$urlBase/UpdateDataRuteros/[:idupdate]")
+    //   .link(() => UserConsult());
 
-    //borra rutero por medio de su id (delete)
-    router
-      .route("$urlBase/DeleteRuterosById/[:DeleteRuterosId]") //LISTO
-      .link(() => UserConsult());
+    // borra rutero por medio de su id (delete)
+    // router
+    //   .route("$urlBase/DeleteRuteroById/[:DeleteRuteroId]")
+    //   .link(() => UserConsult());
 
-    //borra el cliente por medio su id o por su nombre (delete)
-    router
-      .route("$urlBase/DeleteClient/[:DeleteClientKey]") //FALTA CORREGIR ALGO
-      .link(() => UserConsult());
+    // borra el cliente por medio su id o por su nombre (delete)
+    // router
+    //   .route("$urlBase/DeleteClient/[:DeleteClientKey]") //SEGUIR PROBANDO
+    //   .link(() => UserConsult());
 
-    //actualiza la version
-    router
-      .route("$urlBase/UpdateVersion/[:version]") //LISTO
-      .link(() => UserConsult());
+    // actualiza la version
+    // router
+    //   .route("$urlBase/UpdateVersion/[:version]")
+    //   .link(() => UserConsult());
 
-    //actualiza la version de la app
-    router
-      .route("$urlBase/UpdateAppVersion/[:appversion]") //LISTO
-      .link(() => UserConsult());
+    // actualiza la version de la app
+    // router
+    //   .route("$urlBase/UpdateAppVersion/[:appversion]")
+    //   .link(() => UserConsult());
 
-    ////////////consulta con RuteroServer//////////////
-    //consulta toda la base de datos
-    router
-      .route("$urlBase/[:num]")
-      .link(() => UserConsult());
+    // //////////consulta con RuteroServer//////////////
+    // consulta toda la base de datos
+    // router
+    //   .route("$urlBase/[:num]")
+    //   .link(() => UserConsult());
 
-    //consultar rutero especifico por medio de su id
-    router
-      .route("$urlBase/GetRutById/[:ident]") 
-      .link(() => UserConsult());
+    // consultar rutero especifico por medio de su id
+    // router
+    //   .route("$urlBase/GetRutById/[:ident]")
+    //   .link(() => UserConsult());
 
     return router;
   }

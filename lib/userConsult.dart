@@ -108,76 +108,88 @@ class UserConsult extends ResourceController {
     }
   }
 
-  @Operation.post() //ingresar un nuevo Id de usuario si no existe
+  @Operation.post() //ingresar nuevo usuario si no existe
   Future<Response> createClient() async{
+    bool start = false;
+    bool repeat = false;
     try{
       final Map<String, dynamic> body1 = await request.body.decode();
-      final name = body1['name'];
+      final nm = body1['name'];
       final ruteros = body1['ruteros'];
-      bool repeat = false;
+      await globalCollServer.find().forEach((data) async {
+        if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
+          start = true;
+        }
+      });
 
-      if(name != null && ruteros != null){
-        if(name != "" && ruteros != ""){
-          if(ruteros.length == 0){
-            await globalCollUser.find().forEach((bus) async {
-              if(bus['name'] == name){
-                repeat = true;
-              }
-            });
-
-            if(!repeat){
-              String mens; 
-              await globalCollUser.insert(body1);
-              await globalCollUser.find().forEach((data) {
-                bool capture = false;
-                String acum = '';
-                var aa = data['_id'].toString();
-                for(int i = 0; i < aa.length; i++){
-                  if(aa[i] == '('){
-                    capture = true;
-                  }
-                  else if (aa[i] == ')'){
-                    capture = false;
-                  }
-
-                  if(capture && aa[i] != '(' && aa[i] != ')' && aa[i] != '\"'){
-                    acum += aa[i];
-                  }
+      if(start){
+        if(nm != null && ruteros != null){
+          var name = nm.trim();
+          if(name != "" && ruteros != ""){
+            if(ruteros.length == 0 && ruteros.runtimeType == [].runtimeType){
+              await globalCollUser.find().forEach((bus) async {
+                if(bus['name'] == name){
+                  repeat = true;
                 }
-                mens = acum.trim();
               });
-              
-              var resp = await insertToServerData(body1, repeat, mens);
-              if(resp == true){
-                await admon.close();
-                return Response.ok(body1);
+
+              if(!repeat){
+                String mens; 
+                await globalCollUser.insert(body1);
+                await globalCollUser.find().forEach((data) {
+                  bool capture = false;
+                  String acum = '';
+                  var aa = data['_id'].toString();
+                  for(int i = 0; i < aa.length; i++){
+                    if(aa[i] == '('){
+                      capture = true;
+                    }
+                    else if (aa[i] == ')'){
+                      capture = false;
+                    }
+
+                    if(capture && aa[i] != '(' && aa[i] != ')' && aa[i] != '\"'){
+                      acum += aa[i];
+                    }
+                  }
+                  mens = acum.trim();
+                });
+                
+                var resp = await insertToServerData(body1, repeat, mens);
+                if(resp == true){
+                  await admon.close();
+                  return Response.ok(body1);
+                }
+                else{
+                  await admon.close();
+                  return Response.badRequest(body: {"ERROR": "datos no insertados en RuteroServer"});
+                }
               }
               else{
                 await admon.close();
-                return Response.badRequest(body: {"ERROR": "datos no insertados en RuteroServer"});
+                return Response.badRequest(body: {"ERROR": "Ya existe un cliente con el mismo nombre"});
               }
             }
             else{
               await admon.close();
-              return Response.badRequest(body: {"ERROR": "Ya existe un cliente con el mismo nombre"});
+              return Response.badRequest(body: {"ERROR": "El campo ruteros no debe tener ningun valor"});
             }
           }
           else{
-             await admon.close();
-             return Response.badRequest(body: {"ERROR": "El campo ruteros no debe tener ningun valor"});
+            await admon.close();
+            return Response.badRequest(body: {"ERROR": "un campo esta vacio, verifica nuevamente la informacion"});
           }
+          
         }
         else{
           await admon.close();
-          return Response.badRequest(body: {"ERROR": "un campo esta vacio, verifica nuevamente la informacion"});
+          return Response.badRequest(body: {"ERROR": "un campo esta nulo, verifica nuevamente la informacion"});
         }
-        
       }
       else{
         await admon.close();
-        return Response.badRequest(body: {"ERROR": "un campo esta nulo, verifica nuevamente la informacion"});
+        return Response.badRequest(body: {"ERROR": "no hay informacion en la base de datos"});
       }
-
     }
     catch(e){
       print("ERROR: ${e.toString()}");
@@ -186,21 +198,21 @@ class UserConsult extends ResourceController {
     }
   }
 
-  @Operation.put('nameorid') //ingresa datos de los ruteros a los clientes por nombre o por id
-  Future<Response> updateDataBus(@Bind.path('nameorid') String nmOrId) async {
+  @Operation.post('nameorid') //ingresa datos de ruteros a los clientes por su nombre o por su id
+  Future<Response> createDataRuteros(@Bind.path('nameorid') String nmOrId) async {
+    bool start = false;
     try{
-      
       final Map<String, dynamic> body = await request.body.decode();
       ObjectId objectId = ObjectId();
-      final name = body['name'];
-      final chasis = body['chasis'];
+      final name = body['name'].trim();
+      final chasis = body['chasis'].trim();
       final pmr = body['PMR'];
       final routeIndex = body['routeIndex'];
-      final status = body['status'];
-      final publicIP = body['publicIP'];
-      final sharedIP = body['sharedIP'];
-      final version = body['version'];
-      final appVersion = body['appVersion'];
+      final status = body['status'].trim();
+      final publicIP = body['publicIP'].trim();
+      final sharedIP = body['sharedIP'].trim();
+      final version = body['version'].trim();
+      final appVersion = body['appVersion'].trim();
       final panic = body['panic'];
       final routes = body['routes'];
       ready = false;
@@ -218,10 +230,17 @@ class UserConsult extends ResourceController {
         'appVersion': appVersion,
         'panic': panic,
         'routes': routes,
-      };      
+      };
 
-      if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && routes != ""){
-        if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && routes != null){
+      await globalCollServer.find().forEach((data) async {
+        if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
+          start = true;
+        }
+      });
+
+      if(start){
+        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && routes != ""){
+          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && routes != null){
             await globalCollUser.find().forEach((data) async {
               if(data['name'] == nmOrId || data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
                 ready = true;
@@ -297,6 +316,11 @@ class UserConsult extends ResourceController {
           await admon.close();
           return Response.badRequest(body: {"ERROR": "falta llenar un dato, verifica nuevamente la informacion"});
         }
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "no hay informacion en la base de datos"});
+      }
     }
     catch(e){
       await admon.close();
@@ -306,92 +330,105 @@ class UserConsult extends ResourceController {
 
   @Operation.put('idupdate') //actualiza la informacion que esta dentro de ruteros
   Future<Response> updateDataRuteros(@Bind.path('idupdate') String idUpdate) async {
+    bool start = false;
     try{
       Map<String, dynamic> newBody;
       final Map<String, dynamic> body = await request.body.decode();
-      final name = body['name'];
-      final chasis = body['chasis'];
+      final name = body['name'].trim();
+      final chasis = body['chasis'].trim();
       final pmr = body['PMR'];
       final routeIndex = body['routeIndex'];
-      final status = body['status'];
-      final publicIP = body['publicIP'];
-      final sharedIP = body['sharedIP'];
-      final version = body['version'];
-      final appVersion = body['appVersion'];
+      final status = body['status'].trim();
+      final publicIP = body['publicIP'].trim();
+      final sharedIP = body['sharedIP'].trim();
+      final version = body['version'].trim();
+      final appVersion = body['appVersion'].trim();
       final panic = body['panic'];
       final routes = body['routes'];
       ready = false;
 
-      if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && routes != ""){
-        if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && routes != null){
+      await globalCollServer.find().forEach((data) async {
+        if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
+          start = true;
+        }
+      });
 
-          await globalCollUser.find().forEach((data) async {
-            if(data['ruteros'] != null && data['ruteros'].length != 0){
-              for(var val in data['ruteros']){
-                if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
-                  dynamic ind;
-                  newBody = {
-                    'id': ObjectId.fromHexString(idUpdate),
-                    'name': name,
-                    'chasis': chasis,
-                    'PMR': pmr,
-                    'routeIndex': routeIndex,
-                    'status': status,
-                    'publicIP': publicIP,
-                    'sharedIP': sharedIP,
-                    'version': version,
-                    'appVersion': appVersion,
-                    'panic': panic,
-                    'routes': routes,
-                  };
+      if(start){
+        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && routes != ""){
+          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && routes != null){
 
-                  try{
-                    var value2 = data['ruteros'];
-                    value2.forEach((k){
-                      if(val['id'] == k['id']){
-                        ind = value2.indexOf(k);                        
+            await globalCollUser.find().forEach((data) async {
+              if(data['ruteros'] != null && data['ruteros'].length != 0){
+                for(var val in data['ruteros']){
+                  if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
+                    dynamic ind;
+                    newBody = {
+                      'id': ObjectId.fromHexString(idUpdate),
+                      'name': name,
+                      'chasis': chasis,
+                      'PMR': pmr,
+                      'routeIndex': routeIndex,
+                      'status': status,
+                      'publicIP': publicIP,
+                      'sharedIP': sharedIP,
+                      'version': version,
+                      'appVersion': appVersion,
+                      'panic': panic,
+                      'routes': routes,
+                    };
+
+                    try{
+                      var value2 = data['ruteros'];
+                      value2.forEach((k){
+                        if(val['id'] == k['id']){
+                          ind = value2.indexOf(k);                        
+                        }
+                      });
+
+                      value2.removeAt(ind);
+
+                      if(value2 != null){
+                        var rut = value2;
+                        rut.add(newBody);
+                        val = rut;
+                        ready = true;
+                        await globalCollUser.save(data);
                       }
-                    });
-
-                    value2.removeAt(ind);
-
-                    if(value2 != null){
-                      var rut = value2;
-                      rut.add(newBody);
-                      val = rut;
-                      ready = true;
-                      await globalCollUser.save(data);
                     }
-                  }
-                  catch(e){
-                    ready = false;
-                    print(e);
-                  }
+                    catch(e){
+                      ready = false;
+                      print(e);
+                    }
 
+                  }
                 }
               }
+            });
+            
+            if(ready){
+              await updateRuterosInToServer(newBody, idUpdate);
+              await admon.close();
+              return Response.ok(newBody);
             }
-          });
-          
-          if(ready){
-            await updateRuterosInToServer(newBody, idUpdate);
-            await admon.close();
-            return Response.ok(newBody);
+            else{
+              await admon.close();
+              return Response.badRequest(body: {"ERROR": "Este rutero no existe en la base de datos"});
+            }
+
           }
           else{
             await admon.close();
-            return Response.badRequest(body: {"ERROR": "Este rutero no existe en la base de datos"});
+            return Response.badRequest(body: {"ERROR": "un dato esta nulo, verifica nuevamente la informacion"});
           }
-
         }
         else{
           await admon.close();
-          return Response.badRequest(body: {"ERROR": "un dato esta nulo, verifica nuevamente la informacion"});
+          return Response.badRequest(body: {"ERROR": "falta llenar un dato, verifica nuevamente la informacion"});
         }
       }
       else{
         await admon.close();
-        return Response.badRequest(body: {"ERROR": "falta llenar un dato, verifica nuevamente la informacion"});
+        return Response.badRequest(body: {"ERROR": "no hay informacion en la base de datos"});
       }
     }
     catch(e){
@@ -400,11 +437,11 @@ class UserConsult extends ResourceController {
     }
   }
 
-  @Operation.delete('DeleteRuterosId') //borra el rutero por medio de la id
-  Future<Response> deleteRuteroForId(@Bind.path('DeleteRuterosId') String idDelete) async {
+  @Operation.delete('DeleteRuteroId') //borra el rutero por medio de la id
+  Future<Response> deleteRuteroForId(@Bind.path('DeleteRuteroId') String idDelete) async {
+    dynamic ind;
+    ready = false;
     try{
-      dynamic ind;
-      ready = false;
       await globalCollUser.find().forEach((data) async {
         for(var value in data['ruteros']){
           if(value['id'] == ObjectId.fromHexString(idDelete) || value['id'] == idDelete) {
@@ -498,6 +535,7 @@ class UserConsult extends ResourceController {
             catch(e){
               print('ERROR: $e');
               await admon.close();
+              return Response.badRequest(body: {"ERROR":"el cliente no se pudo borrar"});
             }
           }
         }
@@ -541,11 +579,13 @@ class UserConsult extends ResourceController {
     String getVersionBody = "";
     String getVersionDB = "";
     final Map<String, dynamic> body = await request.body.decode();
-    final version = body['version'];
+    final vs = body['version'];
+    var version = vs.trim().toString();
+    var point = ".".allMatches(version).length;
     String acum = "", numVersion = "", numBundle = "", numCompilado = ""; //numero de version . numero de bundle . numero de compilado
     String numVersion2 = "", numBundle2 = "", numCompilado2 = "";
     try{
-      if(version != "" && version != null){
+      if(version != "" && version != null && point == 2){
         await globalCollServer.find().forEach((data) async {
           String versionDB = data['version'].toString();
           String versionBody = version.toString();
@@ -614,21 +654,25 @@ class UserConsult extends ResourceController {
           step = 0;
           getVersionBody = "$numVer2.$numBun2.$numCom2";
           getVersionDB = "$numVer.$numBun.$numCom";
-          await changeVersion(1, body, getVersionBody, getVersionDB);
+          await changeVersion(1, getVersionBody, getVersionDB);
         }
         if(getVersionBody != ""){
+          await admon.close();
           return Response.ok(getVersionBody);
         }
         else{
+          await admon.close();
           return Response.badRequest(body: {"ERROR": "no se actualizo la version"});
         }
       }
       else{
-        return Response.badRequest(body: {"ERROR": "falta ingresar la informacion de la Version"});
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "falta informacion en la Version"});
       }
     }
     catch(e){
       print(e);
+      await admon.close();
       return Response.badRequest(body: {"ERROR": "intentalo nuevamente"});
     }
   }
@@ -639,11 +683,13 @@ class UserConsult extends ResourceController {
     String getAppVersionBody = "";
     String getAppVersionDB = "";
     final Map<String, dynamic> body = await request.body.decode();
-    final appVersion = body['appVersion'];
+    final appVs = body['appVersion'];
+    var appVersion = appVs.trim().toString();
+    var point = ".".allMatches(appVersion).length;
     String acum = "", numAppVersion = "", numAppBundle = "", numAppCompilado = ""; //numero de version . numero de bundle . numero de compilado
     String numAppVersion2 = "", numAppBundle2 = "", numAppCompilado2 = "";
     try{
-      if(appVersion != "" && appVersion != null){
+      if(appVersion != "" && appVersion != null && point == 2){
         await globalCollServer.find().forEach((data) async {
           String appVersionDB = data['appVersion'].toString();
           String appVersionBody = appVersion.toString();
@@ -714,21 +760,25 @@ class UserConsult extends ResourceController {
           step = 0;
           getAppVersionBody = "$numAppVer2.$numAppBun2.$numAppCom2";
           getAppVersionDB = "$numAppVer.$numAppBun.$numAppCom";
-          await changeVersion(2, body, getAppVersionBody, getAppVersionDB);
+          await changeVersion(2, getAppVersionBody, getAppVersionDB);
         }
         if(getAppVersionBody != ""){
+          await admon.close();
           return Response.ok(getAppVersionBody);
         }
         else{
+          await admon.close();
           return Response.badRequest(body: {"ERROR": "no se actualizo la appVersion"});
         }
       }
       else{
-        return Response.badRequest(body: {"ERROR": "falta ingresar la informacion de la appVersion"});
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "falta informacion en la appVersion"});
       }
     }
     catch(e){
       print(e);
+      await admon.close();
       return Response.badRequest(body: {"ERROR": "intentalo nuevamente"});
     }
     
@@ -753,7 +803,7 @@ class UserConsult extends ResourceController {
       }
       else{
         await admon.close();
-        return Response.badRequest(body: {"ERROR": "No hay informacion en Usuarios"});
+        return Response.badRequest(body: {"ERROR": "No hay informacion la base de datos"});
       }
     }
     catch(e){
@@ -793,7 +843,7 @@ class UserConsult extends ResourceController {
   }
 
   /////////////////////////////////////////////////////////////////////////////////////
-  ///
+  
   Future<bool> insertToServerData(Map<String, dynamic> body, bool repeat, String mens) async {
     ready = false;
     try{
@@ -983,10 +1033,6 @@ class UserConsult extends ResourceController {
         catch(e){
           print(e);
         }
-
-
-        //await globalCollDevice.remove(await globalCollDevice.findOne({'id': ObjectId.fromHexString(idUpdate)})); //borra en base de datos Usuarios por medio de su id
-        //await globalCollDevice.save(newBody);
       });
     }
     catch(e){
@@ -1099,21 +1145,13 @@ class UserConsult extends ResourceController {
     if(listOfId.length > 0){
       int numb = 0;
       var value = await globalCollDevice.findOne({"ruteros":  [ ]});
-      if(value != null){
-        print("esta vacio");
-      }
-      else{
+      if(value == null){
         await eliminateId(listOfId, 0, ind);
       }
     }
   }
 
-  Future<void> changeVersion(int whatVersion, Map<String, dynamic> body, String getVersionBody, String getVersionDB) async {
-    //Buscar updateRuterosInToServer
-    dynamic ind;
-    print(getVersionBody);
-    print(getVersionDB);
-
+  Future<void> changeVersion(int whatVersion, String getVersionBody, String getVersionDB) async {
     if(whatVersion == 1){
       try{
         var v1 = await globalCollServer.findOne({"version": getVersionDB});
@@ -1151,11 +1189,7 @@ class UserConsult extends ResourceController {
 
         if(value2 != null){
           var rut = value2;
-          //rut.add(newBody);
           value2 = rut;
-          //print(data);
-          //ready = true;
-          //i = 0;
           await globalCollDevice.save(data);
         }
       }

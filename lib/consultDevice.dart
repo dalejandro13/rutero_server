@@ -2,17 +2,16 @@ import 'package:tuple/tuple.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:rutero_server/adminDB.dart';
 import 'package:rutero_server/rutero_server.dart';
+import 'dart:io' show Platform;
 import 'dart:developer' as dev;
 
-class UserConsult extends ResourceController {
+class ConsultDevices extends ResourceController {
   DbCollection globalCollUser, globalCollServer, globalCollDevice;
   AdmonDB admon = AdmonDB();
   bool change = false;
   bool ready = false;
-  int numVer, numVer2, numAppVer, numAppVer2, step;
-  int numBun, numBun2, numAppBun, numAppBun2;
-  int numCom, numCom2, numAppCom, numAppCom2;
-  UserConsult(){
+  
+  ConsultDevices(){
     connectRuteros();
   }
 
@@ -24,8 +23,6 @@ class UserConsult extends ResourceController {
     });   
   }
 
-  //////////////////////////////para Usuarios/////////////////////////////////////////
-  
   @Operation.get()
   Future<Response> getDataInDevice() async {
     try{
@@ -38,7 +35,7 @@ class UserConsult extends ResourceController {
       }
       else{
         await admon.close();
-        return Response.badRequest(body: {"ERROR": "No hay informacion en Usuarios"});
+        return Response.badRequest(body: {"ERROR": "No hay informacion en Devices"});
       }
     }
     catch(e){
@@ -200,7 +197,8 @@ class UserConsult extends ResourceController {
 
   @Operation.post('nameorid') //ingresa datos de ruteros a los clientes por su nombre o por su id
   Future<Response> createDataRuteros(@Bind.path('nameorid') String nmOrId) async {
-    bool start = false;
+    String os = Platform.operatingSystem;
+    bool start = false;    
     try{
       final Map<String, dynamic> body = await request.body.decode();
       ObjectId objectId = ObjectId();
@@ -219,6 +217,7 @@ class UserConsult extends ResourceController {
 
       Map<String, dynamic> newBody = {
         'id': objectId,
+        'OS': os,
         'name': name,
         'chasis': chasis,
         'PMR': pmr,
@@ -331,6 +330,7 @@ class UserConsult extends ResourceController {
   @Operation.put('idupdate') //actualiza la informacion que esta dentro de ruteros
   Future<Response> updateDataRuteros(@Bind.path('idupdate') String idUpdate) async {
     bool start = false;
+    String os = Platform.operatingSystem;
     try{
       Map<String, dynamic> newBody;
       final Map<String, dynamic> body = await request.body.decode();
@@ -364,6 +364,7 @@ class UserConsult extends ResourceController {
                     dynamic ind;
                     newBody = {
                       'id': ObjectId.fromHexString(idUpdate),
+                      'OS': os,
                       'name': name,
                       'chasis': chasis,
                       'PMR': pmr,
@@ -481,337 +482,8 @@ class UserConsult extends ResourceController {
     }
   }
 
-  @Operation.delete('DeleteClientKey') //borra el cliente por medio de la id o por el nombre
-  Future<Response> deleteClientForId(@Bind.path('DeleteClientKey') String keyDelete) async {
-    dynamic ind;
-    ready = false;
-    int decision = 0;
-    try{
-      await globalCollServer.find().forEach((data) async {
-        for(var result in data['users']){
-          try{
-            if(result['id'] == ObjectId.fromHexString(keyDelete) || result['id'] == keyDelete){
-              ready = true;
-              var vl = data['users'];
-              vl.forEach((k){
-                if(k['id'] == ObjectId.fromHexString(keyDelete) || k['id'] == keyDelete){
-                  ind = vl.indexOf(k);                    
-                }
-              });
-
-              vl.removeAt(ind);
-
-              if(vl != null){
-                var rut = vl;
-                result = rut;
-                ready = true;
-                decision = 1;
-                await globalCollServer.save(data); 
-              }   
-            }
-          }
-          catch(e){
-            try{ 
-              if(result['name'] == keyDelete){
-                ready = true;
-                var vl = data['users'];
-                vl.forEach((k){
-                  if(k['name'] == keyDelete){
-                    ind = vl.indexOf(k);                    
-                  }
-                });
-
-                vl.removeAt(ind);
-
-                if(vl != null){
-                  var rut = vl;
-                  result = rut;
-                  ready = true;
-                  decision = 2;
-                  await globalCollServer.save(data);
-                }
-              }
-            }
-            catch(e){
-              print('ERROR: $e');
-              await admon.close();
-              return Response.badRequest(body: {"ERROR":"el cliente no se pudo borrar"});
-            }
-          }
-        }
-      });
-
-      if(ready){
-        if(decision == 1){
-          await deleteInDeviceDb(keyDelete, decision);
-          await globalCollUser.remove(await globalCollUser.findOne({'_id': ObjectId.fromHexString(keyDelete)})); //borra en base de datos Usuarios por medio de su id
-          
-        }
-        else if (decision == 2){
-          await deleteInDeviceDb(keyDelete, decision);
-          await globalCollUser.remove(await globalCollUser.findOne({'name': keyDelete})); //borra en base de datos Usuarios por medio de su nombre
-        }
-
-        if(decision == 1 || decision == 2){
-          await admon.close();
-          return Response.ok("OK: el cliente ha sido borrado exitosamente");
-        }
-        else{
-          await admon.close();
-          return Response.badRequest(body: {"ERROR":"el cliente no existe en la base de datos"});
-        }
-      }
-      else{
-        await admon.close();
-        return Response.badRequest(body: {"ERROR":"el cliente no existe en la base de datos"});
-      }
-    }
-    catch(e){
-      decision = 0;
-      await admon.close();
-      return Response.badRequest(body: {"ERROR": e.toString()});
-    }
-  }
-
-  @Operation.put('version')
-  Future<Response> updateVersion(@Bind.path('version') String getVersion) async {
-    Map<String, dynamic> ver;
-    String getVersionBody = "";
-    String getVersionDB = "";
-    final Map<String, dynamic> body = await request.body.decode();
-    final vs = body['version'];
-    var version = vs.trim().toString();
-    var point = ".".allMatches(version).length;
-    String acum = "", numVersion = "", numBundle = "", numCompilado = ""; //numero de version . numero de bundle . numero de compilado
-    String numVersion2 = "", numBundle2 = "", numCompilado2 = "";
-    try{
-      if(version != "" && version != null && point == 2){
-        await globalCollServer.find().forEach((data) async {
-          String versionDB = data['version'].toString();
-          String versionBody = version.toString();
-          for(int i = 0; i < versionDB.length; i++){
-            if(versionDB[i] == "."){
-              if(numVersion == ""){
-                numVersion = acum;
-                acum = "";
-              }
-              else if(numBundle == "" && numVersion != ""){
-                numBundle = acum;
-                acum = "";
-              }
-            }
-            else{
-              acum += versionDB[i];
-            }
-          }
-          if(numCompilado == "" && numVersion != "" && numBundle != ""){
-            numCompilado = acum;
-            acum = "";
-          }
-
-          for(int j = 0; j < versionBody.length; j++){
-            if(versionBody[j] == "."){
-              if(numVersion2 == ""){
-                numVersion2 = acum;
-                acum = "";
-              }
-              else if(numBundle2 == "" && numVersion2 != ""){
-                numBundle2 = acum;
-                acum = "";
-              }
-            }
-            else{
-              acum += versionBody[j];
-            }
-          }
-          if(numCompilado2 == "" && numVersion2 != "" && numBundle2 != ""){
-            numCompilado2 = acum;
-            acum = "";
-          }
-          step = 0;
-          //viene de la base de datos
-          numVer = int.parse(numVersion);
-          numBun = int.parse(numBundle);
-          numCom = int.parse(numCompilado);
-
-          //viene de Body
-          numVer2 = int.parse(numVersion2);
-          numBun2 = int.parse(numBundle2);
-          numCom2 = int.parse(numCompilado2);
-
-          if(numCom2 > numCom){
-            step++;
-          }
-          if(numBun2 > numBun){
-            step++;
-          }
-          if(numVer2 > numVer){
-            step++;
-          }
-        });
-
-        if(step >= 1 && step <= 3){
-          step = 0;
-          getVersionBody = "$numVer2.$numBun2.$numCom2";
-          getVersionDB = "$numVer.$numBun.$numCom";
-          await changeVersion(1, getVersionBody, getVersionDB);
-        }
-        if(getVersionBody != ""){
-          await admon.close();
-          return Response.ok(getVersionBody);
-        }
-        else{
-          await admon.close();
-          return Response.badRequest(body: {"ERROR": "no se actualizo la version"});
-        }
-      }
-      else{
-        await admon.close();
-        return Response.badRequest(body: {"ERROR": "falta informacion en la Version"});
-      }
-    }
-    catch(e){
-      print(e);
-      await admon.close();
-      return Response.badRequest(body: {"ERROR": "intentalo nuevamente"});
-    }
-  }
-
-  @Operation.put('appversion')
-  Future<Response> updateAppVersion(@Bind.path('appversion') String getAppVersion) async {
-    Map<String, dynamic> appVer;
-    String getAppVersionBody = "";
-    String getAppVersionDB = "";
-    final Map<String, dynamic> body = await request.body.decode();
-    final appVs = body['appVersion'];
-    var appVersion = appVs.trim().toString();
-    var point = ".".allMatches(appVersion).length;
-    String acum = "", numAppVersion = "", numAppBundle = "", numAppCompilado = ""; //numero de version . numero de bundle . numero de compilado
-    String numAppVersion2 = "", numAppBundle2 = "", numAppCompilado2 = "";
-    try{
-      if(appVersion != "" && appVersion != null && point == 2){
-        await globalCollServer.find().forEach((data) async {
-          String appVersionDB = data['appVersion'].toString();
-          String appVersionBody = appVersion.toString();
-
-          for(int i = 0; i < appVersionDB.length; i++){
-            if(appVersionDB[i] == "."){
-              if(numAppVersion == ""){
-                numAppVersion = acum;
-                acum = "";
-              }
-              else if(numAppBundle == "" && numAppVersion != ""){
-                numAppBundle = acum;
-                acum = "";
-              }
-            }
-            else{
-              acum += appVersionDB[i];
-            }
-          }
-          if(numAppCompilado == "" && numAppVersion != "" && numAppBundle != ""){
-            numAppCompilado = acum;
-            acum = "";
-          }
-
-          for(int j = 0; j < appVersionBody.length; j++){
-            if(appVersionBody[j] == "."){
-              if(numAppVersion2 == ""){
-                numAppVersion2 = acum;
-                acum = "";
-              }
-              else if(numAppBundle2 == "" && numAppVersion2 != ""){
-                numAppBundle2 = acum;
-                acum = "";
-              }
-            }
-            else{
-              acum += appVersionBody[j];
-            }
-          }
-          if(numAppCompilado2 == "" && numAppVersion2 != "" && numAppBundle2 != ""){
-            numAppCompilado2 = acum;
-            acum = "";
-          }
-          step = 0;
-
-          //viene de la base de datos
-          numAppVer = int.parse(numAppVersion);
-          numAppBun = int.parse(numAppBundle);
-          numAppCom = int.parse(numAppCompilado);
-
-          //viene del Body
-          numAppVer2 = int.parse(numAppVersion2);
-          numAppBun2 = int.parse(numAppBundle2);
-          numAppCom2 = int.parse(numAppCompilado2);
-
-          if(numAppCom2 > numAppCom){
-            step++;
-          }
-          if(numAppBun2 > numAppBun){
-            step++;
-          }
-          if(numAppVer2 > numAppVer){
-            step++;
-          }
-        });
-
-        if(step >= 1 && step <= 3){
-          step = 0;
-          getAppVersionBody = "$numAppVer2.$numAppBun2.$numAppCom2";
-          getAppVersionDB = "$numAppVer.$numAppBun.$numAppCom";
-          await changeVersion(2, getAppVersionBody, getAppVersionDB);
-        }
-        if(getAppVersionBody != ""){
-          await admon.close();
-          return Response.ok(getAppVersionBody);
-        }
-        else{
-          await admon.close();
-          return Response.badRequest(body: {"ERROR": "no se actualizo la appVersion"});
-        }
-      }
-      else{
-        await admon.close();
-        return Response.badRequest(body: {"ERROR": "falta informacion en la appVersion"});
-      }
-    }
-    catch(e){
-      print(e);
-      await admon.close();
-      return Response.badRequest(body: {"ERROR": "intentalo nuevamente"});
-    }
-    
-  }
-
   //////////////////////////////////para servidor//////////////////////////////////////
   
-  @Operation.get('num') //consulta todo el servidor o consulta todos los clientes
-  Future<Response> getAllClients(@Bind.path('num') String number) async {
-    try{
-      var busesList = [];
-      if(number == "0"){
-        await globalCollServer.find().forEach(busesList.add);
-      }
-      else if(number == "1"){
-        await globalCollUser.find().forEach(busesList.add);
-      }
-      
-      if(busesList.length > 0){
-        await admon.close();
-        return Response.ok(busesList);
-      }
-      else{
-        await admon.close();
-        return Response.badRequest(body: {"ERROR": "No hay informacion la base de datos"});
-      }
-    }
-    catch(e){
-      await admon.close();
-      return Response.badRequest(body: {"ERROR": e.toString()});
-    }
-  }
-
   @Operation.get('ident') //consulta un rutero en especifico por medio de su id
   Future<Response> getInfoRutero(@Bind.path('ident') String id) async {
     try{
@@ -917,6 +589,7 @@ class UserConsult extends ResourceController {
           if(vl['name'] == nameClient || vl['id'] == nameClient){
             newBody = {
               'id': objectId,
+              'OS': body['OS'],
               'name': body['name'],
               'chasis': body['chasis'],
               'PMR': body['PMR'],
@@ -979,6 +652,7 @@ class UserConsult extends ResourceController {
               
               newBody2 = {
                 'id': ObjectId.fromHexString(idUpdate),
+                'OS': newBody['OS'],
                 'name': newBody['name'],
                 'chasis': newBody['chasis'],
                 'PMR': newBody['PMR'],
@@ -1104,104 +778,6 @@ class UserConsult extends ResourceController {
     }
     catch(e){
       return false;
-    }
-  }
-
-  Future<void> deleteInDeviceDb(String keyDelete, int decision) async {
-    var listOfId = [];
-    dynamic ind;
-
-    await globalCollUser.find().forEach((data) async {
-      if(decision == 1){ //busqueda por id
-        try{
-          if(data['_id'] == ObjectId.fromHexString(keyDelete) || data['_id'] == keyDelete){
-            var vl = data['ruteros'];
-            vl.forEach((k){
-              listOfId.add(k['id']);
-            }); 
-          }
-        }
-        catch(e){
-          print('ERROR: $e');
-          await admon.close();
-        }
-      }
-      else if(decision == 2){ //busqueda por nombre
-        try{ 
-          if(data['name'] == keyDelete){
-            var vl = data['ruteros'];
-            vl.forEach((k){
-              listOfId.add(k['id']);
-            });
-          }
-        }
-        catch(e){
-          print('ERROR: $e');
-          await admon.close();
-        }
-      }
-    });
-
-    if(listOfId.length > 0){
-      int numb = 0;
-      var value = await globalCollDevice.findOne({"ruteros":  [ ]});
-      if(value == null){
-        await eliminateId(listOfId, 0, ind);
-      }
-    }
-  }
-
-  Future<void> changeVersion(int whatVersion, String getVersionBody, String getVersionDB) async {
-    if(whatVersion == 1){
-      try{
-        var v1 = await globalCollServer.findOne({"version": getVersionDB});
-        v1["version"] = getVersionBody;
-        await globalCollServer.save(v1);
-      }
-      catch(e){
-        print(e);
-      }
-    }
-    else if(whatVersion == 2){
-      try{
-        var v1 = await globalCollServer.findOne({"appVersion": getVersionDB});
-        v1["appVersion"] = getVersionBody;
-        await globalCollServer.save(v1);
-      }
-      catch(e){
-        print(e);
-      }
-    }
-  }
-
-  Future<void> eliminateId(List<dynamic> listId, int i, dynamic ind) async{
-    var id = listId[i];
-    await globalCollDevice.find().forEach((data) async {
-      try{
-        var value2 = data['ruteros'];
-        value2.forEach((k){
-          if(id == k['id']){
-            ind = value2.indexOf(k);                        
-          }
-        });
-
-        value2.removeAt(ind);
-
-        if(value2 != null){
-          var rut = value2;
-          value2 = rut;
-          await globalCollDevice.save(data);
-        }
-      }
-      catch(e){
-        ready = false;
-        print(e);
-      }
-    });
-
-    i++;
-    if(i < listId.length){
-      await eliminateId(listId, i, ind);
     }
   }
 }

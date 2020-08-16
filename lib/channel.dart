@@ -1,6 +1,8 @@
-import 'package:mongo_dart/mongo_dart.dart';
-import 'package:rutero_server/adminDB.dart';
-import 'package:rutero_server/userConsult.dart';
+// import 'package:mongo_dart/mongo_dart.dart';
+// import 'package:rutero_server/adminDB.dart';
+import 'package:rutero_server/consultUsers.dart';
+import 'package:rutero_server/consultServer.dart';
+import 'package:rutero_server/consultDevice.dart';
 import 'package:rutero_server/variables.dart';
 import 'rutero_server.dart';
 import 'package:http/http.dart' as http;
@@ -15,7 +17,7 @@ import 'package:html/parser.dart';
 class RuteroServerChannel extends ApplicationChannel {
 
   Variables variables;
-  String urlBase;
+  String urlBase, urlBase2;
   //AdmonDB admon = AdmonDB();
   //DbCollection globalCollUser, globalCollServer;
 
@@ -72,69 +74,66 @@ class RuteroServerChannel extends ApplicationChannel {
     // Prefer to use `link` instead of `linkFunction`.
     // See: https://aqueduct.io/docs/http/request_controller/
 
-
-    ///////////////consulta con Usuarios//////////////
+    //consulta con todos los usuarios
+    router
+      .route("$urlBase/Users")
+      .link(() => ConsultUsers());
     
     //consultar todos los ruteros en device
     router
-      .route("$urlBase/Devices/") //LISTO
-      .link(() => UserConsult());
+      .route("$urlBase/Devices") //LISTO
+      .link(() => ConsultDevices());
         
     //consultar todos los ruteros con id de empresa
     router
       .route("$urlBase/Devices/GetUserID/[:id]") //LISTO
-      .link(() => UserConsult());
+      .link(() => ConsultDevices());
     
     //consultar todos los ruteros por el nombre de la empresa
     router
       .route("$urlBase/Devices/GetByUserName/[:name]") //LISTO
-      .link(() => UserConsult());
+      .link(() => ConsultDevices());
 
     // ingresa un nuevo usuario si no existe (post)
     router
-      .route("$urlBase/Users/") //LISTO
-      .link(() => UserConsult());
+      .route("$urlBase/Users/CreateUsers") //LISTO
+      .link(() => ConsultDevices());
 
     // insertar un nuevo rutero, si el nombre o la id coincide con el del usuario almacenado en la base de datos (post)
     router
-      .route("$urlBase/Devices/CreateInUser/[:nameorid]") //LISTO //CONTINUA ACA
-      .link(() => UserConsult());
+      .route("$urlBase/Devices/CreateInUser/[:nameorid]") //LISTO
+      .link(() => ConsultDevices());
 
     // actualizar informacion acerca de los ruteros (put)
-    // router
-    //   .route("$urlBase/UpdateDataRuteros/[:idupdate]")
-    //   .link(() => UserConsult());
+    router
+      .route("$urlBase/Devices/UpdateDevices/[:idupdate]") //LISTO
+      .link(() => ConsultDevices());
 
     // borra rutero por medio de su id (delete)
-    // router
-    //   .route("$urlBase/DeleteRuteroById/[:DeleteRuteroId]")
-    //   .link(() => UserConsult());
+    router
+      .route("$urlBase/Devices/DeleteDevices/[:DeleteRuteroId]") //LISTO
+      .link(() => ConsultDevices());
 
     // borra el cliente por medio su id o por su nombre (delete)
-    // router
-    //   .route("$urlBase/DeleteClient/[:DeleteClientKey]") //SEGUIR PROBANDO
-    //   .link(() => UserConsult());
+    router
+      .route("$urlBase/Users/Delete/[:DeleteUserKey]") //SEGUIR PROBANDO
+      .link(() => ConsultUsers());
 
     // actualiza la version
-    // router
-    //   .route("$urlBase/UpdateVersion/[:version]")
-    //   .link(() => UserConsult());
+    router
+      .route("$urlBase/Version") //LISTO
+      .link(() => ConsultServer());
 
-    // actualiza la version de la app
-    // router
-    //   .route("$urlBase/UpdateAppVersion/[:appversion]")
-    //   .link(() => UserConsult());
-
-    // //////////consulta con RuteroServer//////////////
-    // consulta toda la base de datos
-    // router
-    //   .route("$urlBase/[:num]")
-    //   .link(() => UserConsult());
+    ////////////consulta con RuteroServer//////////////
+    //consulta toda la base de datos
+    router
+      .route("$urlBase")
+      .link(() => ConsultServer());
 
     // consultar rutero especifico por medio de su id
-    // router
-    //   .route("$urlBase/GetRutById/[:ident]")
-    //   .link(() => UserConsult());
+    router
+      .route("$urlBase/Devices/ID/[:ident]")
+      .link(() => ConsultDevices());
 
     return router;
   }

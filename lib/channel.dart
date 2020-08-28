@@ -18,8 +18,6 @@ class RuteroServerChannel extends ApplicationChannel {
 
   Variables variables;
   String urlBase, urlBase2;
-  //AdmonDB admon = AdmonDB();
-  //DbCollection globalCollUser, globalCollServer;
 
   RuteroServerChannel(){
     variables = Variables();
@@ -27,13 +25,6 @@ class RuteroServerChannel extends ApplicationChannel {
     //connectRuteros();
     //"http://localhost:9742/Api/FlexoRuteros/Buses/GetAllDevices/[:idDevice]"
   }
-
-  // void connectRuteros() async {
-  //   await admon.connectToRuteroServer().then((datab) {
-  //     globalCollUser = datab.collection('Usuario');
-  //     globalCollServer = datab.collection('RuteroServer');
-  //   });   
-  // }
 
   Future<void> getPublicIPAddress() async {
     try{
@@ -81,47 +72,47 @@ class RuteroServerChannel extends ApplicationChannel {
     
     //consultar todos los ruteros en device
     router
-      .route("$urlBase/Devices") //LISTO
+      .route("$urlBase/Devices")
       .link(() => ConsultDevices());
         
     //consultar todos los ruteros con id de empresa
     router
-      .route("$urlBase/Devices/GetUserID/[:id]") //LISTO
+      .route("$urlBase/Devices/GetUserID/[:id]")
       .link(() => ConsultDevices());
     
     //consultar todos los ruteros por el nombre de la empresa
     router
-      .route("$urlBase/Devices/GetByUserName/[:name]") //LISTO
+      .route("$urlBase/Devices/GetByUserName/[:name]")
       .link(() => ConsultDevices());
 
     // ingresa un nuevo usuario si no existe (post)
     router
-      .route("$urlBase/Users/CreateUsers") //LISTO
+      .route("$urlBase/Users/CreateUsers")
       .link(() => ConsultDevices());
 
-    // insertar un nuevo rutero, si el nombre o la id coincide con el del usuario almacenado en la base de datos (post)
+    // generar un nuevo rutero, si el nombre o la id coincide con el del usuario almacenado en la base de datos (post)
     router
-      .route("$urlBase/Devices/CreateInUser/[:nameorid]") //LISTO
+      .route("$urlBase/Devices/CreateInUser/[:nameorid]")
       .link(() => ConsultDevices());
 
     // actualizar informacion acerca de los ruteros (put)
     router
-      .route("$urlBase/Devices/UpdateDevices/[:idupdate]") //LISTO
+      .route("$urlBase/Devices/UpdateDevices/[:idupdate]")
       .link(() => ConsultDevices());
 
-    // borra rutero por medio de su id (delete)
+    // Elimina rutero por medio de su id (delete)
     router
-      .route("$urlBase/Devices/DeleteDevices/[:DeleteRuteroId]") //LISTO
+      .route("$urlBase/Devices/DeleteDevices/[:DeleteRuteroId]")
       .link(() => ConsultDevices());
 
-    // borra el cliente por medio su id o por su nombre (delete)
+    // Elimina Usuario por medio su id ó por su nombre (delete)
     router
-      .route("$urlBase/Users/Delete/[:DeleteUserKey]") //SEGUIR PROBANDO
+      .route("$urlBase/Users/Delete/[:DeleteUserKey]")
       .link(() => ConsultUsers());
 
-    // actualiza la version
+    // actualiza Version ó appVersion
     router
-      .route("$urlBase/Version") //LISTO
+      .route("$urlBase/Version")
       .link(() => ConsultServer());
 
     ////////////consulta con RuteroServer//////////////

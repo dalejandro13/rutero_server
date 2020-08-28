@@ -2,7 +2,7 @@ import 'package:tuple/tuple.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:rutero_server/adminDB.dart';
 import 'package:rutero_server/rutero_server.dart';
-import 'dart:io' show Platform;
+//import 'dart:io' show Platform;
 import 'dart:developer' as dev;
 
 class ConsultDevices extends ResourceController {
@@ -197,11 +197,12 @@ class ConsultDevices extends ResourceController {
 
   @Operation.post('nameorid') //ingresa datos de ruteros a los clientes por su nombre o por su id
   Future<Response> createDataRuteros(@Bind.path('nameorid') String nmOrId) async {
-    String os = Platform.operatingSystem;
+    //String os = Platform.operatingSystem;
     bool start = false;    
     try{
       final Map<String, dynamic> body = await request.body.decode();
       ObjectId objectId = ObjectId();
+      final os = body['OS'].trim();
       final name = body['name'].trim();
       final chasis = body['chasis'].trim();
       final pmr = body['PMR'];
@@ -212,7 +213,6 @@ class ConsultDevices extends ResourceController {
       final version = body['version'].trim();
       final appVersion = body['appVersion'].trim();
       final panic = body['panic'];
-      final routes = body['routes'];
       ready = false;
 
       Map<String, dynamic> newBody = {
@@ -228,7 +228,6 @@ class ConsultDevices extends ResourceController {
         'version': version,
         'appVersion': appVersion,
         'panic': panic,
-        'routes': routes,
       };
 
       await globalCollServer.find().forEach((data) async {
@@ -238,8 +237,8 @@ class ConsultDevices extends ResourceController {
       });
 
       if(start){
-        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && routes != ""){
-          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && routes != null){
+        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != ""){
+          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null){
             await globalCollUser.find().forEach((data) async {
               if(data['name'] == nmOrId || data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
                 ready = true;
@@ -330,21 +329,50 @@ class ConsultDevices extends ResourceController {
   @Operation.put('idupdate') //actualiza la informacion que esta dentro de ruteros
   Future<Response> updateDataRuteros(@Bind.path('idupdate') String idUpdate) async {
     bool start = false;
-    String os = Platform.operatingSystem;
+    //String os = Platform.operatingSystem;
     try{
       Map<String, dynamic> newBody;
+      dynamic os, name, chasis, pmr, routeIndex, status, publicIP, sharedIP, version, appVersion, panic;
       final Map<String, dynamic> body = await request.body.decode();
-      final name = body['name'].trim();
-      final chasis = body['chasis'].trim();
-      final pmr = body['PMR'];
-      final routeIndex = body['routeIndex'];
-      final status = body['status'].trim();
-      final publicIP = body['publicIP'].trim();
-      final sharedIP = body['sharedIP'].trim();
-      final version = body['version'].trim();
-      final appVersion = body['appVersion'].trim();
-      final panic = body['panic'];
-      final routes = body['routes'];
+      if(body['OS'] != "" && body['OS'] != null){
+        os = body['OS'].trim();
+      }
+      if(body['name'] != "" && body['name'] != null){
+        name = body['name'].trim();
+      }
+      if(body['chasis'] != "" && body['chasis'] != null){
+        chasis = body['chasis'].trim();
+      }
+      if(body['PMR'] != "" && body['PMR'] != null){
+        if(body['PMR'].runtimeType == bool){
+          pmr = body['PMR'];
+        }
+      }
+      if(body['routeIndex'] != "" && body['routeIndex'] != null){
+        if(body['routeIndex'].runtimeType == int){
+          routeIndex = body['routeIndex'];
+        }
+      }
+      if(body['status'] != "" && body['status'] != null){
+        status = body['status'].trim();
+      }
+      if(body['publicIP'] != "" && body['publicIP'] != null){
+        publicIP = body['publicIP'].trim();
+      }
+      if(body['sharedIP'] != "" && body['sharedIP'] != null){
+        sharedIP = body['sharedIP'].trim();
+      }
+      if(body['version'] != "" && body['version'] != null){
+        version = body['version'].trim();
+      }
+      if(body['appVersion'] != "" && body['appVersion'] != null){
+        appVersion = body['appVersion'].trim();
+      }
+      if(body['panic'] != "" &&body['panic'] != null){
+        if(body['panic'].runtimeType == bool){
+          panic = body['panic'];
+        }
+      }
       ready = false;
 
       await globalCollServer.find().forEach((data) async {
@@ -354,77 +382,75 @@ class ConsultDevices extends ResourceController {
       });
 
       if(start){
-        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && routes != ""){
-          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && routes != null){
+        await globalCollUser.find().forEach((data) async {
+          if(data['ruteros'] != null && data['ruteros'].length != 0){
+            for(var val in data['ruteros']){
+              if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
+                dynamic ind;
 
-            await globalCollUser.find().forEach((data) async {
-              if(data['ruteros'] != null && data['ruteros'].length != 0){
-                for(var val in data['ruteros']){
-                  if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
-                    dynamic ind;
-                    newBody = {
-                      'id': ObjectId.fromHexString(idUpdate),
-                      'OS': os,
-                      'name': name,
-                      'chasis': chasis,
-                      'PMR': pmr,
-                      'routeIndex': routeIndex,
-                      'status': status,
-                      'publicIP': publicIP,
-                      'sharedIP': sharedIP,
-                      'version': version,
-                      'appVersion': appVersion,
-                      'panic': panic,
-                      'routes': routes,
-                    };
+                os ??= val['OS'];
+                name ??= val['name'];
+                chasis ??= val['chasis'];
+                pmr ??= val['PMR'];
+                routeIndex ??= val['routeIndex'];
+                status ??= val['status'];
+                publicIP ??= val['publicIP'];
+                sharedIP ??= val['sharedIP'];
+                version ??= val['version'];
+                appVersion ??= val['appVersion'];
+                panic ??= val['panic'];
 
-                    try{
-                      var value2 = data['ruteros'];
-                      value2.forEach((k){
-                        if(val['id'] == k['id']){
-                          ind = value2.indexOf(k);                        
-                        }
-                      });
+                newBody = {
+                  'id': ObjectId.fromHexString(idUpdate),
+                  'OS': os,
+                  'name': name,
+                  'chasis': chasis,
+                  'PMR': pmr,
+                  'routeIndex': routeIndex,
+                  'status': status,
+                  'publicIP': publicIP,
+                  'sharedIP': sharedIP,
+                  'version': version,
+                  'appVersion': appVersion,
+                  'panic': panic,
+                };
 
-                      value2.removeAt(ind);
-
-                      if(value2 != null){
-                        var rut = value2;
-                        rut.add(newBody);
-                        val = rut;
-                        ready = true;
-                        await globalCollUser.save(data);
-                      }
+                try{
+                  var value2 = data['ruteros'];
+                  value2.forEach((k){
+                    if(val['id'] == k['id']){
+                      ind = value2.indexOf(k);                        
                     }
-                    catch(e){
-                      ready = false;
-                      print(e);
-                    }
+                  });
 
+                  value2.removeAt(ind);
+
+                  if(value2 != null){
+                    var rut = value2;
+                    rut.add(newBody);
+                    val = rut;
+                    ready = true;
+                    await globalCollUser.save(data);
                   }
                 }
-              }
-            });
-            
-            if(ready){
-              await updateRuterosInToServer(newBody, idUpdate);
-              await admon.close();
-              return Response.ok(newBody);
-            }
-            else{
-              await admon.close();
-              return Response.badRequest(body: {"ERROR": "Este rutero no existe en la base de datos"});
-            }
+                catch(e){
+                  ready = false;
+                  print(e);
+                }
 
+              }
+            }
           }
-          else{
-            await admon.close();
-            return Response.badRequest(body: {"ERROR": "un dato esta nulo, verifica nuevamente la informacion"});
-          }
+        });
+        
+        if(ready){
+          await updateRuterosInToServer(newBody, idUpdate);
+          await admon.close();
+          return Response.ok(newBody);
         }
         else{
           await admon.close();
-          return Response.badRequest(body: {"ERROR": "falta llenar un dato, verifica nuevamente la informacion"});
+          return Response.badRequest(body: {"ERROR": "Este rutero no existe en la base de datos"});
         }
       }
       else{
@@ -438,8 +464,8 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  @Operation.delete('DeleteRuteroId') //borra el rutero por medio de la id
-  Future<Response> deleteRuteroForId(@Bind.path('DeleteRuteroId') String idDelete) async {
+  @Operation.delete('deleteruteroid') //borra el rutero por medio de la id
+  Future<Response> deleteRuteroForId(@Bind.path('deleteruteroid') String idDelete) async {
     dynamic ind;
     ready = false;
     try{
@@ -600,7 +626,7 @@ class ConsultDevices extends ResourceController {
               'version': body['version'],
               'appVersion': body['appVersion'],
               'panic': body['panic'],
-              'routes': body['routes'],
+              //'routes': body['routes'],
             };
           }
         }
@@ -663,7 +689,7 @@ class ConsultDevices extends ResourceController {
                 'version': newBody['version'],
                 'appVersion': newBody['appVersion'],
                 'panic': newBody['panic'],
-                'routes': newBody['routes'],
+                //'routes': newBody['routes'],
               };
 
               var value3 = value['ruteros'];

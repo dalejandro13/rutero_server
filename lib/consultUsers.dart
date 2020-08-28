@@ -6,6 +6,7 @@ class ConsultUsers extends ResourceController {
   DbCollection globalCollUser, globalCollServer, globalCollDevice;
   AdmonDB admon = AdmonDB();
   bool ready;
+  int decision;
 
   ConsultUsers(){
     connectRuteros();
@@ -43,11 +44,11 @@ class ConsultUsers extends ResourceController {
     }
   }
 
-  @Operation.delete('DeleteUserKey') //borra el cliente por medio de la id o por el nombre
-  Future<Response> deleteClientForId(@Bind.path('DeleteUserKey') String keyDelete) async {
+  @Operation.delete('deleteuserkey') //borra el cliente por medio de la id o por el nombre
+  Future<Response> deleteClientForId(@Bind.path('deleteuserkey') String keyDelete) async {
     dynamic ind;
     ready = false;
-    int decision = 0;
+    decision = 0;
     try{
       await globalCollServer.find().forEach((data) async {
         for(var result in data['users']){

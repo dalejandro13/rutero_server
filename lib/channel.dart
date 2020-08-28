@@ -102,15 +102,15 @@ class RuteroServerChannel extends ApplicationChannel {
 
     // Elimina rutero por medio de su id (delete)
     router
-      .route("$urlBase/Devices/DeleteDevices/[:DeleteRuteroId]")
+      .route("$urlBase/Devices/DeleteDevices/[:deleteruteroid]")
       .link(() => ConsultDevices());
 
     // Elimina Usuario por medio su id ó por su nombre (delete)
     router
-      .route("$urlBase/Users/Delete/[:DeleteUserKey]")
+      .route("$urlBase/Users/Delete/[:deleteuserkey]")
       .link(() => ConsultUsers());
 
-    // actualiza Version ó appVersion
+    // actualiza Version ó appVersion (put)
     router
       .route("$urlBase/Version")
       .link(() => ConsultServer());

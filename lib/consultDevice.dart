@@ -213,6 +213,7 @@ class ConsultDevices extends ResourceController {
       final version = body['version'].trim();
       final appVersion = body['appVersion'].trim();
       final panic = body['panic'];
+      final online = body['onlineDevices'];
       ready = false;
 
       Map<String, dynamic> newBody = {
@@ -228,6 +229,7 @@ class ConsultDevices extends ResourceController {
         'version': version,
         'appVersion': appVersion,
         'panic': panic,
+        'onlineDevices': online,
       };
 
       await globalCollServer.find().forEach((data) async {
@@ -237,8 +239,8 @@ class ConsultDevices extends ResourceController {
       });
 
       if(start){
-        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != ""){
-          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null){
+        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && online != ""){
+          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && online != null){
             await globalCollUser.find().forEach((data) async {
               if(data['name'] == nmOrId || data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
                 ready = true;
@@ -332,7 +334,7 @@ class ConsultDevices extends ResourceController {
     //String os = Platform.operatingSystem;
     try{
       Map<String, dynamic> newBody;
-      dynamic os, name, chasis, pmr, routeIndex, status, publicIP, sharedIP, version, appVersion, panic;
+      dynamic os, name, chasis, pmr, routeIndex, status, publicIP, sharedIP, version, appVersion, panic, online;
       final Map<String, dynamic> body = await request.body.decode();
       if(body['OS'] != "" && body['OS'] != null){
         os = body['OS'].trim();
@@ -368,11 +370,17 @@ class ConsultDevices extends ResourceController {
       if(body['appVersion'] != "" && body['appVersion'] != null){
         appVersion = body['appVersion'].trim();
       }
-      if(body['panic'] != "" &&body['panic'] != null){
+      if(body['panic'] != "" && body['panic'] != null){
         if(body['panic'].runtimeType == bool){
           panic = body['panic'];
         }
       }
+      if(body['onlineDevices'] != "" && body['onlineDevices'] != null){
+        if(body['onlineDevices'].length == 3){ //verifica que tenga los 3 digitos
+          online = body['onlineDevices'];
+        }
+      }
+
       ready = false;
 
       await globalCollServer.find().forEach((data) async {
@@ -399,6 +407,7 @@ class ConsultDevices extends ResourceController {
                 version ??= val['version'];
                 appVersion ??= val['appVersion'];
                 panic ??= val['panic'];
+                online ??= val['onlineDevices'];
 
                 newBody = {
                   'id': ObjectId.fromHexString(idUpdate),
@@ -413,6 +422,7 @@ class ConsultDevices extends ResourceController {
                   'version': version,
                   'appVersion': appVersion,
                   'panic': panic,
+                  'onlineDevices': online,
                 };
 
                 try{
@@ -626,7 +636,7 @@ class ConsultDevices extends ResourceController {
               'version': body['version'],
               'appVersion': body['appVersion'],
               'panic': body['panic'],
-              //'routes': body['routes'],
+              'onlineDevices': body['onlineDevices'],
             };
           }
         }
@@ -689,7 +699,7 @@ class ConsultDevices extends ResourceController {
                 'version': newBody['version'],
                 'appVersion': newBody['appVersion'],
                 'panic': newBody['panic'],
-                //'routes': newBody['routes'],
+                'onlineDevices': newBody['onlineDevices'],
               };
 
               var value3 = value['ruteros'];

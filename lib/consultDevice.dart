@@ -215,6 +215,7 @@ class ConsultDevices extends ResourceController {
       final panic = body['panic'];
       final online = body['onlineDevices'];
       final update = body['update'];
+      final gps = body['GPS'];
       ready = false;
 
       Map<String, dynamic> newBody = {
@@ -232,6 +233,7 @@ class ConsultDevices extends ResourceController {
         'panic': panic,
         'onlineDevices': online,
         'update': update,
+        'GPS': gps,
       };
 
       await globalCollServer.find().forEach((data) async {
@@ -241,8 +243,8 @@ class ConsultDevices extends ResourceController {
       });
 
       if(start){
-        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && online != "" && update != ""){
-          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && online != null && update != null){
+        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && online != "" && update != "" && gps != ""){
+          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && online != null && update != null && gps != null){
             await globalCollUser.find().forEach((data) async {
               if(data['name'] == nmOrId || data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
                 ready = true;
@@ -336,7 +338,7 @@ class ConsultDevices extends ResourceController {
     //String os = Platform.operatingSystem;
     try{
       Map<String, dynamic> newBody;
-      dynamic os, name, chasis, pmr, routeIndex, status, publicIP, sharedIP, version, appVersion, panic, online, update;
+      dynamic os, name, chasis, pmr, routeIndex, status, publicIP, sharedIP, version, appVersion, panic, online, update, gps;
       final Map<String, dynamic> body = await request.body.decode();
       if(body['OS'] != "" && body['OS'] != null){
         os = body['OS'].trim();
@@ -387,6 +389,9 @@ class ConsultDevices extends ResourceController {
           update = body['update'];
         }
       }
+      if(body['GPS'] != "" && body['GPS'] != null){
+        gps = body['GPS'].trim();
+      }
 
       ready = false;
 
@@ -416,6 +421,7 @@ class ConsultDevices extends ResourceController {
                 panic ??= val['panic'];
                 online ??= val['onlineDevices'];
                 update ??= val['update'];
+                gps ??= val['GPS'];
 
                 newBody = {
                   'id': ObjectId.fromHexString(idUpdate),
@@ -432,6 +438,7 @@ class ConsultDevices extends ResourceController {
                   'panic': panic,
                   'onlineDevices': online,
                   'update': update,
+                  'GPS': gps,
                 };
 
                 try{
@@ -647,6 +654,7 @@ class ConsultDevices extends ResourceController {
               'panic': body['panic'],
               'onlineDevices': body['onlineDevices'],
               'update': body['update'],
+              'GPS': body['GPS'],
             };
           }
         }
@@ -711,6 +719,7 @@ class ConsultDevices extends ResourceController {
                 'panic': newBody['panic'],
                 'onlineDevices': newBody['onlineDevices'],
                 'update': newBody['update'],
+                'GPS': newBody['GPS'],
               };
 
               var value3 = value['ruteros'];

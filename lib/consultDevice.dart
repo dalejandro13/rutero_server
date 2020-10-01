@@ -1,15 +1,17 @@
+import 'dart:convert';
+
 import 'package:tuple/tuple.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:rutero_server/adminDB.dart';
 import 'package:rutero_server/rutero_server.dart';
-//import 'dart:io' show Platform;
 import 'dart:developer' as dev;
 
 class ConsultDevices extends ResourceController {
-  DbCollection globalCollUser, globalCollServer, globalCollDevice;
+  DbCollection globalCollUser, globalCollServer, globalCollDevice, globalCollCredentials;
   AdmonDB admon = AdmonDB();
   bool change = false;
   bool ready = false;
+  bool ready2 = false;
   
   ConsultDevices(){
     connectRuteros();
@@ -20,16 +22,18 @@ class ConsultDevices extends ResourceController {
       globalCollUser = datab.collection('user');
       globalCollServer = datab.collection('serverApp');
       globalCollDevice = datab.collection('device');
+      globalCollCredentials = datab.collection('credentials');
     });   
   }
 
   @Operation.get()
   Future<Response> getDataInDevice() async {
     try{
-      var busesList = [];
+      List<dynamic> busesList = null;
+      busesList = [];
       await globalCollDevice.find().forEach(busesList.add);
       
-      if(busesList.length > 0){
+      if(busesList.isNotEmpty){
         await admon.close();
         return Response.ok(busesList);
       }
@@ -47,7 +51,8 @@ class ConsultDevices extends ResourceController {
   @Operation.get('id')
   Future<Response> getUser(@Bind.path('id') String id) async {
     try{
-      var busesList = [];
+      List<dynamic> busesList = null;
+      busesList = [];
       await globalCollUser.find().forEach((bus) {
         if(bus['_id'] == ObjectId.fromHexString(id) || bus['_id'] == id){
           if(bus['ruteros'].length != 0){
@@ -78,7 +83,8 @@ class ConsultDevices extends ResourceController {
   @Operation.get('name')
   Future<Response> getByName(@Bind.path('name') String name) async {
     try{
-      var busesList = [];
+      List<dynamic> busesList = null;
+      busesList = [];
       await globalCollUser.find().forEach((bus) {
         if(bus['name'] == name){
           if(bus['ruteros'].length != 0){
@@ -89,7 +95,7 @@ class ConsultDevices extends ResourceController {
           }
         }
       });
-      if(busesList.length > 0){
+      if(busesList.isNotEmpty){
         await admon.close();
         return Response.ok(busesList);
       }
@@ -105,6 +111,31 @@ class ConsultDevices extends ResourceController {
     }
   }
 
+  @Operation.get('nameClient')
+  Future<Response> getInfoClient(@Bind.path('nameClient') String name) async {
+    try{
+      Map<String, dynamic> mapeo = null;
+      await globalCollUser.find().forEach((info) {
+        if(info['name'] == name){
+          mapeo = {'name': info['name'], 'password': info['password'], 'ftp': info['ftp']};
+        }
+      });
+
+      if(mapeo != null){
+        await admon.close();
+        return Response.ok(mapeo);
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "Este usuario no existe en la base de datos, verifica la informacion"});
+      }
+    }
+    catch(e){
+      await admon.close();
+      return Response.badRequest(body: {"ERROR": e.toString()});
+    }
+  }
+
   @Operation.post() //ingresar nuevo usuario si no existe
   Future<Response> createClient() async{
     bool start = false;
@@ -112,6 +143,8 @@ class ConsultDevices extends ResourceController {
     try{
       final Map<String, dynamic> body1 = await request.body.decode();
       final nm = body1['name'];
+      final pass = body1['password'];
+      final ft = body1['ftp'];
       final ruteros = body1['ruteros'];
       await globalCollServer.find().forEach((data) async {
         if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
@@ -120,67 +153,79 @@ class ConsultDevices extends ResourceController {
       });
 
       if(start){
-        if(nm != null && ruteros != null){
-          var name = nm.trim();
-          if(name != "" && ruteros != ""){
-            if(ruteros.length == 0 && ruteros.runtimeType == [].runtimeType){
-              await globalCollUser.find().forEach((bus) async {
-                if(bus['name'] == name){
-                  repeat = true;
-                }
-              });
-
-              if(!repeat){
-                String mens; 
-                await globalCollUser.insert(body1);
-                await globalCollUser.find().forEach((data) {
-                  bool capture = false;
-                  String acum = '';
-                  var aa = data['_id'].toString();
-                  for(int i = 0; i < aa.length; i++){
-                    if(aa[i] == '('){
-                      capture = true;
+        if(pass != null && ft != null){
+          var password = pass.trim();
+          var ftp = ft.trim();
+          if(password != "" && ftp != ""){
+            if(nm != null && ruteros != null){
+              var name = nm.trim();
+              if(name != "" && ruteros != ""){
+                if(ruteros.length == 0 && ruteros.runtimeType == [].runtimeType){
+                  await globalCollUser.find().forEach((bus) async {
+                    if(bus['name'] == name){
+                      repeat = true;
                     }
-                    else if (aa[i] == ')'){
-                      capture = false;
-                    }
+                  });
 
-                    if(capture && aa[i] != '(' && aa[i] != ')' && aa[i] != '\"'){
-                      acum += aa[i];
+                  if(!repeat){
+                    String mens; 
+                    await globalCollUser.insert(body1);
+                    await globalCollUser.find().forEach((data) {
+                      bool capture = false;
+                      String acum = '';
+                      var aa = data['_id'].toString();
+                      for(int i = 0; i < aa.length; i++){
+                        if(aa[i] == '('){
+                          capture = true;
+                        }
+                        else if (aa[i] == ')'){
+                          capture = false;
+                        }
+
+                        if(capture && aa[i] != '(' && aa[i] != ')' && aa[i] != '\"'){
+                          acum += aa[i];
+                        }
+                      }
+                      mens = acum.trim();
+                    });
+                    
+                    var resp = await insertToServerData(body1, repeat, mens);
+                    if(resp == true){
+                      await admon.close();
+                      return Response.ok(body1);
+                    }
+                    else{
+                      await admon.close();
+                      return Response.badRequest(body: {"ERROR": "datos no insertados en RuteroServer"});
                     }
                   }
-                  mens = acum.trim();
-                });
-                
-                var resp = await insertToServerData(body1, repeat, mens);
-                if(resp == true){
-                  await admon.close();
-                  return Response.ok(body1);
+                  else{
+                    await admon.close();
+                    return Response.badRequest(body: {"ERROR": "Ya existe un cliente con el mismo nombre"});
+                  }
                 }
                 else{
                   await admon.close();
-                  return Response.badRequest(body: {"ERROR": "datos no insertados en RuteroServer"});
+                  return Response.badRequest(body: {"ERROR": "El campo ruteros no debe tener ningun valor"});
                 }
               }
               else{
                 await admon.close();
-                return Response.badRequest(body: {"ERROR": "Ya existe un cliente con el mismo nombre"});
+                return Response.badRequest(body: {"ERROR": "un campo esta vacio, verifica nuevamente la informacion"});
               }
+              
             }
             else{
               await admon.close();
-              return Response.badRequest(body: {"ERROR": "El campo ruteros no debe tener ningun valor"});
+              return Response.badRequest(body: {"ERROR": "un campo esta nulo, verifica nuevamente la informacion"});
             }
           }
           else{
-            await admon.close();
-            return Response.badRequest(body: {"ERROR": "un campo esta vacio, verifica nuevamente la informacion"});
+            return Response.badRequest(body: {"ERROR": "el campo ftp o password no tienen informacion, verifica nuevamente la informacion"});
           }
-          
         }
         else{
-          await admon.close();
-          return Response.badRequest(body: {"ERROR": "un campo esta nulo, verifica nuevamente la informacion"});
+          return Response.badRequest(body: {"ERROR": "el campo ftp o password son nulos, verifica nuevamente la informacion"});
         }
       }
       else{
@@ -195,7 +240,7 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  @Operation.post('nameorid') //ingresa datos de ruteros a los clientes por su nombre o por su id
+  @Operation.post('nameorid') //ingresa datos de ruteros a los clientes que ya existan en la base de datos, ya sea por su nombre o por su id
   Future<Response> createDataRuteros(@Bind.path('nameorid') String nmOrId) async {
     //String os = Platform.operatingSystem;
     bool start = false;    
@@ -298,6 +343,7 @@ class ConsultDevices extends ResourceController {
               var result = await insertInfoRuteroInServer(newBody, ready, nmOrId, objectId);
 
               if(result.item1){
+                await insertNameInCredentials(newBody);
                 await admon.close();
                 return Response.ok(result.item2);
               }
@@ -442,7 +488,7 @@ class ConsultDevices extends ResourceController {
                 };
 
                 try{
-                  var value2 = data['ruteros'];
+                  var value2 = data['ruteros']; //DE MUESTRA
                   value2.forEach((k){
                     if(val['id'] == k['id']){
                       ind = value2.indexOf(k);                        
@@ -482,6 +528,166 @@ class ConsultDevices extends ResourceController {
       else{
         await admon.close();
         return Response.badRequest(body: {"ERROR": "no hay informacion en la base de datos"});
+      }
+    }
+    catch(e){
+      await admon.close();
+      return Response.badRequest(body: {"ERROR": e.toString()});
+    }
+  }
+
+  @Operation.put('nameUser') //actualiza ó ingresa nuevo password y ftp dado el nombre del rutero
+  Future<Response> updatePassword(@Bind.path('nameUser') String nameUser) async {
+    bool start = false;
+    try{
+      Map<String, dynamic> newBody = null, data2 = null;
+      //List<dynamic> infoUser = null;
+      List<Map<String, dynamic>> infoUser = null;
+      dynamic pass = null, ftp = null, ident = null, value2 = null;
+      int ind = 0;
+      ready = false;
+      ready2 = false;
+      infoUser = [];
+
+      await globalCollServer.find().forEach((data) async {
+        if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
+          start = true;
+        }
+      });
+
+      if(start){
+        final Map<String, dynamic> body = await request.body.decode();
+        if(body['password'] != "" && body['password'] != null){
+          pass ??= body['password'].trim();
+        }
+        if(body['ftp'] != "" && body['ftp'] != null){
+          ftp ??= body['ftp'].trim();
+        }
+
+        if(pass != null && pass != ""){
+          if(ftp != null && ftp != ""){
+            
+            // await globalCollUser.find().forEach((data) async { //cambia el dato de la coleccion user
+            //   if(!ready2){
+            //       if(data['name'] == nameUser){
+            //         if(!ready2){
+            //           var value2 = data;
+            //           value2.forEach((k, v){
+            //             if(data['id'] == v['id']){
+            //               newBody = {
+            //                 "id": v['id'],
+            //                 "name": v['name'],
+            //                 "password": pass,
+            //                 "ftp": ftp,
+            //                 "ruteros": v['ruteros']
+            //               };
+            //               ind = int.parse(value2.indexOf(v).toString()); 
+            //             }
+            //           });
+
+            //           value2.removeAt(ind);
+
+            //           if(value2 != null){
+            //             var rut = value2;
+            //             rut.add(newBody);
+            //             val = rut;
+            //             ready = true;
+            //             await globalCollUser.save(data);
+            //           }
+            //         }
+            //       }
+            //   }
+            // });
+
+            await globalCollServer.find().forEach((data) async { //cambia los datos de la coleccion server
+              if(!ready){
+                for(var val in data['users']) {
+                  if(val['name'] == nameUser){
+                    if(!ready){
+                      value2 = data['users'];
+                      value2.forEach((k){
+                        if(val['id'] == k['id']){
+                          try{
+                            newBody = {
+                              "id": k['id'], //ObjectId.fromHexString(k['id'].toString()), //k['id'],
+                              "name": k['name'],
+                              "password": pass,
+                              "ftp": ftp,
+                              "ruteros": k['ruteros']
+                            };
+                            ind = int.parse(value2.indexOf(k).toString()); 
+                          }
+                          catch(e){
+                            return Response.badRequest(body: {"ERROR": "no almacena newBody"});
+                          }
+                        }
+                      });
+
+                      value2.removeAt(ind);
+
+                      if(value2 != null){
+                        var rut = value2;
+                        rut.add(newBody);
+                        val = rut;
+                        ready = true;
+                        await globalCollServer.save(data);
+                      }
+                    }
+                  }
+                }
+              }
+            });
+
+            if(ready){
+              if(!ready2) {
+                await globalCollUser.find().forEach((data) async {
+                  infoUser.add(data);
+                });
+                for(int j = 0; j < infoUser.length; j++){
+                  if(!ready2){
+                    if(nameUser == infoUser[j]['name']){
+                      ind = j;
+                      ident = infoUser[j]['_id'];
+                      break;
+                    }
+                  }
+                }
+                if(newBody != null){
+                  infoUser.removeAt(ind);
+                  //await globalCollUser.remove(await globalCollUser.findOne({'_id': ident}));
+                  //await globalCollUser.remove(await globalCollUser.findOne({'_id': ident.toString()}));
+                  //Error en la linea de codigo remove
+                  if(infoUser != null){
+                    var rut = infoUser;
+                    //data2 = {"data": infoUser};
+                    rut.add(newBody);
+                    infoUser = rut;
+                    ready2 = true;
+                    for(int i = 0; i < infoUser.length; i++){
+                      await globalCollUser.save(infoUser[i]); //CONTINUA POR ACA
+                    }
+                  }
+                }
+              }
+            }
+
+            if(ready && ready2){
+              return Response.ok(newBody);
+            }
+            else{
+              return Response.badRequest(body: {"ERROR": "La informacion no se pudo guardar, intentalo nuevamente"});
+            }
+          }
+          else{
+            return Response.badRequest(body: {"ERROR": "Falta ingresar el ftp"});
+          }
+        }
+        else{
+          return Response.badRequest(body: {"ERROR": "Falta ingresar la contraseña"});
+        }
+      }
+      else{
+        return Response.badRequest(body: {"ERROR": "No se puede ingresar a la base de datos, intenta nuevamente"});
       }
     }
     catch(e){
@@ -539,7 +745,8 @@ class ConsultDevices extends ResourceController {
   @Operation.get('ident') //consulta un rutero en especifico por medio de su id
   Future<Response> getInfoRutero(@Bind.path('ident') String id) async {
     try{
-      var busesList = [];
+      List<dynamic> busesList = null;
+      busesList = [];
       await globalCollServer.find().forEach((bus) {
         for(var value in bus['users']){
           for(var value2 in value['ruteros']){
@@ -566,6 +773,38 @@ class ConsultDevices extends ResourceController {
     }
   }
 
+  @Operation.get('NameDevice') //consulta un rutero en especifico por medio de su nombre
+  Future<Response> getInfoRuteroByName(@Bind.path('NameDevice') String nameDevices) async {
+    try{
+      List<dynamic> devicesInfo = null;
+      devicesInfo = [];
+      await globalCollDevice.find().forEach((dev){
+        if(dev['ruteros'].length != 0){
+          for(var val in dev['ruteros']){
+            if(val['name'].toLowerCase().trim() == nameDevices.toLowerCase().trim()){
+              devicesInfo.add(val);
+            }
+          }
+        }
+      });
+
+      if(devicesInfo.isNotEmpty){
+        await admon.close();
+        return Response.ok(devicesInfo);
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {'ERROR':'El nombre del dispositivo no existe en el sistema'});
+      }
+    }
+    catch(e){
+      print("ERROR ${e.toString()}");
+      await admon.close();
+      return Response.badRequest(body: {"ERROR": e.toString()});
+    }
+
+  }
+
   /////////////////////////////////////////////////////////////////////////////////////
   
   Future<bool> insertToServerData(Map<String, dynamic> body, bool repeat, String mens) async {
@@ -577,6 +816,8 @@ class ConsultDevices extends ResourceController {
           Map<String, dynamic> newBody = {
             'id': mens,
             'name': body['name'],
+            'password': body['password'],
+            'ftp': body['ftp'],
             'ruteros': body['ruteros'],
           };
 
@@ -694,16 +935,37 @@ class ConsultDevices extends ResourceController {
     }
   }
 
+  Future<void> insertNameInCredentials(Map<String, dynamic> newBody) async {
+    try{
+      Map<String, dynamic> bodyRedWifi = null, bodyCredentials = null;
+
+      bodyRedWifi = {
+        'ssid': '--',
+        'pass': '--'
+      };
+
+      bodyCredentials = {
+        'deviceName': newBody['name'],
+        'networkInterface': bodyRedWifi,
+        'frontal': bodyRedWifi,
+        'lateral': bodyRedWifi,
+        'posterior': bodyRedWifi,
+      };
+      await globalCollCredentials.save(bodyCredentials);
+    }
+    catch(e){
+      await insertNameInCredentials(newBody); //si hay un error, llame de nuevo la funcion
+    }
+  }
+
   Future<void> updateRuterosInToServer(Map<String, dynamic> newBody, String idUpdate) async {
     try{
       Map<String, dynamic> newBody2;
       dynamic ind, vl, ind2;
-
       await globalCollServer.find().forEach((data) async {
         for(var value in data['users']){
           for(var value2 in value['ruteros']){
             if(value2['id'] == ObjectId.fromHexString(idUpdate) || value2['id'] == idUpdate){
-              
               newBody2 = {
                 'id': ObjectId.fromHexString(idUpdate),
                 'OS': newBody['OS'],

@@ -3,7 +3,7 @@ import 'package:mongo_dart/mongo_dart.dart';
 import 'package:rutero_server/adminDB.dart';
 
 class ConsultUsers extends ResourceController {
-  DbCollection globalCollUser, globalCollServer, globalCollDevice;
+  DbCollection globalCollUser, globalCollServer, globalCollDevice, globalCollCredentials;
   AdmonDB admon = AdmonDB();
   bool ready;
   int decision;
@@ -17,6 +17,7 @@ class ConsultUsers extends ResourceController {
       globalCollUser = datab.collection('user');
       globalCollServer = datab.collection('serverApp');
       globalCollDevice = datab.collection('device');
+      globalCollCredentials = datab.collection('credentials');
     });   
   }
 
@@ -62,14 +63,14 @@ class ConsultUsers extends ResourceController {
                 }
               });
 
-              vl.removeAt(ind);
+              vl.removeAt(ind); //NO OLVIDAR DESCOMENTAR ESTO
 
               if(vl != null){
-                var rut = vl;
-                result = rut;
-                ready = true;
-                decision = 1;
-                await globalCollServer.save(data); 
+                var rut = vl; //NO OLVIDAR DESCOMENTAR ESTO
+                result = rut; //NO OLVIDAR DESCOMENTAR ESTO
+                ready = true; 
+                decision = 1; //NO OLVIDAR DESCOMENTAR ESTO
+                await globalCollServer.save(data); //NO OLVIDAR DESCOMENTAR ESTO
               }   
             }
           }
@@ -84,14 +85,14 @@ class ConsultUsers extends ResourceController {
                   }
                 });
 
-                vl.removeAt(ind);
+                vl.removeAt(ind); //NO OLVIDAR DESCOMENTAR ESTO
 
                 if(vl != null){
-                  var rut = vl;
-                  result = rut;
+                  var rut = vl; //NO OLVIDAR DESCOMENTAR ESTO
+                  result = rut; //NO OLVIDAR DESCOMENTAR ESTO
                   ready = true;
-                  decision = 2;
-                  await globalCollServer.save(data);
+                  decision = 2; //NO OLVIDAR DESCOMENTAR ESTO
+                  await globalCollServer.save(data);  //NO OLVIDAR DESCOMENTAR ESTO
                 }
               }
             }
@@ -105,10 +106,11 @@ class ConsultUsers extends ResourceController {
       });
 
       if(ready){
+        //await deleteInCredentials(keyDelete); //borra la informacion en las credenciales
+
         if(decision == 1){
           await deleteInDeviceDb(keyDelete, decision);
           await globalCollUser.remove(await globalCollUser.findOne({'_id': ObjectId.fromHexString(keyDelete)})); //borra en base de datos Usuarios por medio de su id
-          
         }
         else if (decision == 2){
           await deleteInDeviceDb(keyDelete, decision);
@@ -180,7 +182,58 @@ class ConsultUsers extends ResourceController {
     }
   }
 
-  Future<void> eliminateId(List<dynamic> listId, int i, dynamic ind) async{
+  Future<void> deleteInCredentials(String keyDelete) async {
+    try{
+      String nm = null;
+      List<dynamic> nameDevices = null;
+      List<dynamic> identify = null;
+      nameDevices = [];
+      identify = [];
+      await globalCollUser.find().forEach((data) async { //haga una busqueda del usuario por medio de su id
+        if(data['_id'] == ObjectId.fromHexString(keyDelete)){ //|| data['_id'] == keyDelete){
+          nm = data['name'].toString();
+          for(var val in data['ruteros']){
+            nameDevices.add(val['name']); //si encontraste el id, toma los nombres de todos los ruteros
+          }
+        }
+      });
+
+      if(nameDevices.isEmpty){
+        await globalCollUser.find().forEach((data) async { //haga una busqueda del usuario por medio de su nombre
+          if(data['name'] == keyDelete){
+            nm = data['name'].toString();
+            for(var val in data['ruteros']){
+              nameDevices.add(val['name']); //si encontraste el nombre del cliente, toma los nombres de todos los ruteros
+            }
+          }
+        });
+      }
+
+      if(nameDevices.isNotEmpty){
+        await globalCollCredentials.find().forEach((data) async { //busca los identificadores de la coleccion Credentials
+          for(var valueList in nameDevices){
+            if(valueList == data['deviceName']){
+              print("hola");
+              identify.add(data['_id']); //guarda esos identificadores
+            }
+          }
+        });
+      }
+
+      if(identify.isNotEmpty){
+        for(var id in identify){ //cada identificador hay que borrarlo de la coleccion Credentials
+          await globalCollCredentials.remove(await globalCollCredentials.findOne({'_id': id})); //FALTA HACER MAS PRUEBAS
+        }
+      }
+
+    }
+    catch(e){
+      print("Error: $e");
+      await deleteInCredentials(keyDelete);
+    }
+  }
+
+  Future<void> eliminateId(List<dynamic> listId, int i, dynamic ind) async {
     var id = listId[i];
     await globalCollDevice.find().forEach((data) async {
       try{

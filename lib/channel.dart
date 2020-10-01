@@ -1,5 +1,6 @@
 // import 'package:mongo_dart/mongo_dart.dart';
 // import 'package:rutero_server/adminDB.dart';
+import 'package:rutero_server/consultCredentials.dart';
 import 'package:rutero_server/consultUsers.dart';
 import 'package:rutero_server/consultServer.dart';
 import 'package:rutero_server/consultDevice.dart';
@@ -7,6 +8,9 @@ import 'package:rutero_server/variables.dart';
 import 'rutero_server.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart';
+
+
+//181.140.181.103 -> NUEVA IP PUBLICA DEL SERVIDOR
 
 /// This type initializes an application.
 ///
@@ -75,42 +79,52 @@ class RuteroServerChannel extends ApplicationChannel {
       .route("$urlBase/Devices")
       .link(() => ConsultDevices());
         
-    //consultar todos los ruteros con id de empresa
+    //consultar todos los ruteros con id del usuario
     router
       .route("$urlBase/Devices/GetUserID/[:id]")
       .link(() => ConsultDevices());
     
-    //consultar todos los ruteros por el nombre de la empresa
+    //consultar todos los ruteros por el nombre del usuario
     router
       .route("$urlBase/Devices/GetByUserName/[:name]")
       .link(() => ConsultDevices());
 
-    // ingresa un nuevo usuario si no existe (post)
+    //consultar toda la informacion del usuario junto con los ruteros que tenga registrado
+    router
+      .route("$urlBase/Devices/ConsultInfoUser/[:nameClient]")
+      .link(() => ConsultDevices());
+
+    //ingresa un nuevo usuario si no existe (post)
     router
       .route("$urlBase/Users/CreateUsers")
       .link(() => ConsultDevices());
 
-    // generar un nuevo rutero, si el nombre o la id coincide con el del usuario almacenado en la base de datos (post)
+    //generar un nuevo rutero, si el nombre o la id coincide con el del usuario almacenado en la base de datos (post)
     router
       .route("$urlBase/Devices/CreateInUser/[:nameorid]")
       .link(() => ConsultDevices());
 
-    // actualizar informacion acerca de los ruteros (put)
+    //actualizar informacion acerca de los ruteros (put)
     router
       .route("$urlBase/Devices/UpdateDevices/[:idupdate]")
       .link(() => ConsultDevices());
 
-    // Elimina rutero por medio de su id (delete)
+    //ingresar o actualizar password y ftp en los usuarios de la base de datos con el nombre del usuario
+    router
+      .route("$urlBase/Users/UpdatePass/[:nameUser]")
+      .link(() => ConsultDevices());
+
+    //Elimina rutero por medio de su id (delete)
     router
       .route("$urlBase/Devices/DeleteDevices/[:deleteruteroid]")
       .link(() => ConsultDevices());
 
-    // Elimina Usuario por medio su id ó por su nombre (delete)
+    //Elimina Usuario por medio su id ó por su nombre (delete)
     router
       .route("$urlBase/Users/Delete/[:deleteuserkey]")
       .link(() => ConsultUsers());
 
-    // actualiza Version ó appVersion (put)
+    //actualiza Version ó appVersion (put)
     router
       .route("$urlBase/Version")
       .link(() => ConsultServer());
@@ -121,10 +135,30 @@ class RuteroServerChannel extends ApplicationChannel {
       .route("$urlBase")
       .link(() => ConsultServer());
 
-    // consultar rutero especifico por medio de su id
+    //consultar rutero especifico por medio de su id //FALTA PROBAR
     router
       .route("$urlBase/Devices/ID/[:ident]")
       .link(() => ConsultDevices());
+
+    //consultar rutero usando su nombre //FALTA PROBAR
+    router
+      .route("$urlBase/Devices/Name/[:NameDevice]")
+      .link(() => ConsultDevices());
+
+    //consulta las credenciales de un rutero en especifico //FALTA PROBAR
+    router
+      .route("$urlBase/Credentials/Name/[:NameDevice]")
+      .link(() => ConsultCredentials());
+
+    //consultar todas las credenciales de todos los ruteros //LISTO
+    router
+      .route("$urlBase/Credentials")
+      .link(() => ConsultCredentials());
+
+    //actualiza la informacion de las credenciales //FALTA PROBAR
+    router
+      .route("$urlBase/Credentials/UpdateByName/[:Name]")
+      .link(() => ConsultCredentials());
 
     return router;
   }

@@ -240,12 +240,19 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  @Operation.post('nameorid') //ingresa datos de ruteros a los clientes que ya existan en la base de datos, ya sea por su nombre o por su id
+  @Operation.post('nameorid') //ingresa datos de ruteros nuevos a los clientes que ya existan en la base de datos, ya sea por su nombre o por su id
   Future<Response> createDataRuteros(@Bind.path('nameorid') String nmOrId) async {
     //String os = Platform.operatingSystem;
-    bool start = false;    
+    bool start = false;
+    ready = false;
+    bool ready2 = true;
+    dynamic rut = null;
+    Map<String, dynamic> body = null;
+    Map<String, dynamic> newBody = null;
+    Map<String, dynamic> value = null;
+
     try{
-      final Map<String, dynamic> body = await request.body.decode();
+      body = await request.body.decode();
       ObjectId objectId = ObjectId();
       final os = body['OS'].trim();
       final name = body['name'].trim();
@@ -263,7 +270,7 @@ class ConsultDevices extends ResourceController {
       final gps = body['GPS'];
       ready = false;
 
-      Map<String, dynamic> newBody = {
+      newBody = {
         'id': objectId,
         'OS': os,
         'name': name,
@@ -293,44 +300,29 @@ class ConsultDevices extends ResourceController {
             await globalCollUser.find().forEach((data) async {
               if(data['name'] == nmOrId || data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
                 ready = true;
+                for(var vv in data['ruteros']){
+                  if(vv['name'] == name){ //si existe un nombre repetido para este usuario ponga ready2 en false para que no ingrese en la base de datos
+                    ready2 = false;
+                  }
+                }
               }
             });
 
             if(ready){
-              var value = await globalCollUser.findOne({"name": nmOrId });
-              if(value != null){
-                var value2 = value['ruteros'];
-                if(value2 != null){
-                  var rut = value2;
-                  rut.add(newBody);
-                  value2 = rut;
-                  await globalCollUser.save(value);
-                }
-                else{
-                  await globalCollUser.find().forEach((data) async {
-                    if(data['name'] == nmOrId){
-                      var rut = data['ruteros'];
-                      rut.add(newBody);
-                      data['ruteros'] = rut;
-                      await globalCollUser.save(data);
-                    }
-                  });
-                }
-              }
-              else{
-                var value = await globalCollUser.findOne({"_id": ObjectId.fromHexString(nmOrId)});
+              if(ready2){
+                value = await globalCollUser.findOne({"name": nmOrId });
                 if(value != null){
                   var value2 = value['ruteros'];
                   if(value2 != null){
-                    var rut = value2;
+                    rut = value2;
                     rut.add(newBody);
                     value2 = rut;
                     await globalCollUser.save(value);
                   }
                   else{
                     await globalCollUser.find().forEach((data) async {
-                      if(data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
-                        var rut = data['ruteros'];
+                      if(data['name'] == nmOrId){
+                        rut = data['ruteros'];
                         rut.add(newBody);
                         data['ruteros'] = rut;
                         await globalCollUser.save(data);
@@ -338,18 +330,44 @@ class ConsultDevices extends ResourceController {
                     });
                   }
                 }
-              }
+                else{
+                  value = await globalCollUser.findOne({"_id": ObjectId.fromHexString(nmOrId)});
+                  if(value != null){
+                    var value2 = value['ruteros'];
+                    if(value2 != null){
+                      rut = value2;
+                      rut.add(newBody);
+                      value2 = rut;
+                      await globalCollUser.save(value);
+                    }
+                    else{
+                      await globalCollUser.find().forEach((data) async {
+                        if(data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
+                          rut = data['ruteros'];
+                          rut.add(newBody);
+                          data['ruteros'] = rut;
+                          await globalCollUser.save(data);
+                        }
+                      });
+                    }
+                  }
+                }
 
-              var result = await insertInfoRuteroInServer(newBody, ready, nmOrId, objectId);
+                var result = await insertInfoRuteroInServer(newBody, ready, nmOrId, objectId);
 
-              if(result.item1){
-                await insertNameInCredentials(newBody);
-                await admon.close();
-                return Response.ok(result.item2);
+                if(result.item1){
+                  await insertRuteroInCredentials(newBody);
+                  await admon.close();
+                  return Response.ok(result.item2);
+                }
+                else{
+                  await admon.close();
+                  return Response.badRequest(body: {"ERROR": "los datos no se pudieron guardar, intentalo nuevamente"});
+                }
               }
               else{
                 await admon.close();
-                return Response.badRequest(body: {"ERROR": "los datos no se pudieron guardar, intentalo nuevamente"});
+                return Response.badRequest(body: {"ERROR": "el nombre de este rutero ya existe para este usuario, cambia el nombre"});
               }
             }
             else{
@@ -378,14 +396,15 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  @Operation.put('idupdate') //actualiza la informacion que esta dentro de ruteros
+  @Operation.put('idupdate') //actualiza la informacion del rutero identificado con idUpdate
   Future<Response> updateDataRuteros(@Bind.path('idupdate') String idUpdate) async {
     bool start = false;
+    dynamic ind = null, oldName = null;
     //String os = Platform.operatingSystem;
     try{
-      Map<String, dynamic> newBody;
-      dynamic os, name, chasis, pmr, routeIndex, status, publicIP, sharedIP, version, appVersion, panic, online, update, gps;
-      final Map<String, dynamic> body = await request.body.decode();
+      Map<String, dynamic> newBody = null, body = null;
+      dynamic os = null, name = null, chasis = null, pmr = null, routeIndex = null, status = null, publicIP = null, sharedIP = null, version = null, appVersion = null, panic = null, online = null, update = null, gps = null;
+      body = await request.body.decode();
       if(body['OS'] != "" && body['OS'] != null){
         os = body['OS'].trim();
       }
@@ -438,7 +457,6 @@ class ConsultDevices extends ResourceController {
       if(body['GPS'] != "" && body['GPS'] != null){
         gps = body['GPS'].trim();
       }
-
       ready = false;
 
       await globalCollServer.find().forEach((data) async {
@@ -452,8 +470,7 @@ class ConsultDevices extends ResourceController {
           if(data['ruteros'] != null && data['ruteros'].length != 0){
             for(var val in data['ruteros']){
               if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
-                dynamic ind;
-
+                oldName ??= val['name']; //consulta antiguo nombre de la base de datos
                 os ??= val['OS'];
                 name ??= val['name'];
                 chasis ??= val['chasis'];
@@ -509,13 +526,15 @@ class ConsultDevices extends ResourceController {
                   ready = false;
                   print(e);
                 }
-
               }
             }
           }
         });
         
         if(ready){
+          if(name != null){
+            await updateDeviceNameInCredentials(name, oldName, idUpdate);
+          }
           await updateRuterosInToServer(newBody, idUpdate);
           await admon.close();
           return Response.ok(newBody);
@@ -540,14 +559,11 @@ class ConsultDevices extends ResourceController {
   Future<Response> updatePassword(@Bind.path('nameUser') String nameUser) async {
     bool start = false;
     try{
-      Map<String, dynamic> newBody = null, data2 = null;
-      //List<dynamic> infoUser = null;
-      List<Map<String, dynamic>> infoUser = null;
+      Map<String, dynamic> newBody = null;
       dynamic pass = null, ftp = null, ident = null, value2 = null;
       int ind = 0;
       ready = false;
       ready2 = false;
-      infoUser = [];
 
       await globalCollServer.find().forEach((data) async {
         if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
@@ -566,39 +582,6 @@ class ConsultDevices extends ResourceController {
 
         if(pass != null && pass != ""){
           if(ftp != null && ftp != ""){
-            
-            // await globalCollUser.find().forEach((data) async { //cambia el dato de la coleccion user
-            //   if(!ready2){
-            //       if(data['name'] == nameUser){
-            //         if(!ready2){
-            //           var value2 = data;
-            //           value2.forEach((k, v){
-            //             if(data['id'] == v['id']){
-            //               newBody = {
-            //                 "id": v['id'],
-            //                 "name": v['name'],
-            //                 "password": pass,
-            //                 "ftp": ftp,
-            //                 "ruteros": v['ruteros']
-            //               };
-            //               ind = int.parse(value2.indexOf(v).toString()); 
-            //             }
-            //           });
-
-            //           value2.removeAt(ind);
-
-            //           if(value2 != null){
-            //             var rut = value2;
-            //             rut.add(newBody);
-            //             val = rut;
-            //             ready = true;
-            //             await globalCollUser.save(data);
-            //           }
-            //         }
-            //       }
-            //   }
-            // });
-
             await globalCollServer.find().forEach((data) async { //cambia los datos de la coleccion server
               if(!ready){
                 for(var val in data['users']) {
@@ -609,7 +592,7 @@ class ConsultDevices extends ResourceController {
                         if(val['id'] == k['id']){
                           try{
                             newBody = {
-                              "id": k['id'], //ObjectId.fromHexString(k['id'].toString()), //k['id'],
+                              "id": k['id'],
                               "name": k['name'],
                               "password": pass,
                               "ftp": ftp,
@@ -641,52 +624,41 @@ class ConsultDevices extends ResourceController {
             if(ready){
               if(!ready2) {
                 await globalCollUser.find().forEach((data) async {
-                  infoUser.add(data);
+                  if(data["name"] == nameUser){
+                    ident = data['_id'];
+                  }
                 });
-                for(int j = 0; j < infoUser.length; j++){
-                  if(!ready2){
-                    if(nameUser == infoUser[j]['name']){
-                      ind = j;
-                      ident = infoUser[j]['_id'];
-                      break;
-                    }
-                  }
-                }
+
                 if(newBody != null){
-                  infoUser.removeAt(ind);
-                  //await globalCollUser.remove(await globalCollUser.findOne({'_id': ident}));
-                  //await globalCollUser.remove(await globalCollUser.findOne({'_id': ident.toString()}));
-                  //Error en la linea de codigo remove
-                  if(infoUser != null){
-                    var rut = infoUser;
-                    //data2 = {"data": infoUser};
-                    rut.add(newBody);
-                    infoUser = rut;
-                    ready2 = true;
-                    for(int i = 0; i < infoUser.length; i++){
-                      await globalCollUser.save(infoUser[i]); //CONTINUA POR ACA
-                    }
-                  }
+                  await globalCollUser.update(where.eq('_id', ident), modify.set('name', newBody['name']));
+                  await globalCollUser.update(where.eq('_id', ident), modify.set('password', newBody['password']));
+                  await globalCollUser.update(where.eq('_id', ident), modify.set('ftp', newBody['ftp']));
+                  await globalCollUser.update(where.eq('_id', ident), modify.set('ruteros', newBody['ruteros']));
+                  ready2 = true;
                 }
               }
             }
-
             if(ready && ready2){
+              await admon.close();
               return Response.ok(newBody);
             }
             else{
+              await admon.close();
               return Response.badRequest(body: {"ERROR": "La informacion no se pudo guardar, intentalo nuevamente"});
             }
           }
           else{
+            await admon.close();
             return Response.badRequest(body: {"ERROR": "Falta ingresar el ftp"});
           }
         }
         else{
+          await admon.close();
           return Response.badRequest(body: {"ERROR": "Falta ingresar la contraseña"});
         }
       }
       else{
+        await admon.close();
         return Response.badRequest(body: {"ERROR": "No se puede ingresar a la base de datos, intenta nuevamente"});
       }
     }
@@ -698,23 +670,24 @@ class ConsultDevices extends ResourceController {
 
   @Operation.delete('deleteruteroid') //borra el rutero por medio de la id
   Future<Response> deleteRuteroForId(@Bind.path('deleteruteroid') String idDelete) async {
-    dynamic ind;
+    dynamic ind = null, rut = null, vl = null, identForCred = null;
     ready = false;
     try{
       await globalCollUser.find().forEach((data) async {
         for(var value in data['ruteros']){
           if(value['id'] == ObjectId.fromHexString(idDelete) || value['id'] == idDelete) {
-            var vl = data['ruteros'];
+            vl = data['ruteros'];
             vl.forEach((k){
               if(k['id'] == ObjectId.fromHexString(idDelete)){
-                ind = vl.indexOf(k);                    
+                ind = vl.indexOf(k);
+                identForCred = k['id'];               
               }
             });
 
             vl.removeAt(ind);
 
             if(vl != null){
-              var rut = vl;
+              rut = vl;
               value = rut;
               ready = true;
               await globalCollUser.save(data);
@@ -726,12 +699,13 @@ class ConsultDevices extends ResourceController {
 
       if(ready){
         await eraseRuteroInServer(idDelete);
+        await globalCollCredentials.remove(where.eq('_id', ObjectId.fromHexString(idDelete))); //borra el rutero de la coleccion de credenciales
         await admon.close();
-        return Response.ok("OK: la informacion ha sido borrada exitosamente");
+        return Response.ok("OK: el rutero $idDelete ha sido borrado exitosamente");
       }
       else{
         await admon.close();
-        return Response.badRequest(body: {"ERROR":"la informacion no se pudo borrar, verifica nuevamente la informacion"});
+        return Response.badRequest(body: {"ERROR":"el rutero no se pudo borrar, verifica nuevamente la informacion"});
       }
     }
     catch(e){
@@ -806,6 +780,30 @@ class ConsultDevices extends ResourceController {
   }
 
   /////////////////////////////////////////////////////////////////////////////////////
+  
+  // Future<void> deleteRuteroFromCredentials(dynamic identForCred) async {
+  //   try{
+  //     await globalCollCredentials.remove(await globalCollCredentials.findOne({'_id': identForCred}));
+  //   }
+  //   catch(e){
+  //     print(e);
+  //     await deleteRuteroFromCredentials(identForCred);
+  //   }
+  // }
+  
+  
+  Future<void> updateDeviceNameInCredentials(dynamic name, dynamic oldName, String idUpdate) async {
+    try{
+      //print("nombre nuevo: $name");
+      //print("nombre antiguo: $oldName");
+      await globalCollCredentials.update(where.eq('_id', ObjectId.fromHexString(idUpdate)), modify.set('deviceName', name));
+      //print("listo");
+    }
+    catch(e){
+      print(e);
+      await updateDeviceNameInCredentials(name, oldName, idUpdate);
+    }
+  }
   
   Future<bool> insertToServerData(Map<String, dynamic> body, bool repeat, String mens) async {
     ready = false;
@@ -935,33 +933,54 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  Future<void> insertNameInCredentials(Map<String, dynamic> newBody) async {
+  Future<void> insertRuteroInCredentials(Map<String, dynamic> newBody) async {
     try{
       Map<String, dynamic> bodyRedWifi = null, bodyCredentials = null;
+      dynamic id = null;
+
+      await globalCollUser.find().forEach((value) async {
+        for(var vv in value['ruteros']){
+          if(newBody['name'] == vv['name']){
+            id = vv['id'];
+          }
+        }
+      });
 
       bodyRedWifi = {
         'ssid': '--',
         'pass': '--'
       };
-
-      bodyCredentials = {
-        'deviceName': newBody['name'],
-        'networkInterface': bodyRedWifi,
-        'frontal': bodyRedWifi,
-        'lateral': bodyRedWifi,
-        'posterior': bodyRedWifi,
-      };
+      if(id != null){
+        bodyCredentials = {
+          '_id': id,
+          'deviceName': newBody['name'],
+          'networkInterface': bodyRedWifi,
+          'frontal': bodyRedWifi,
+          'lateral': bodyRedWifi,
+          'posterior': bodyRedWifi,
+        };
+      }
+      else{
+        bodyCredentials = {
+          'deviceName': newBody['name'],
+          'networkInterface': bodyRedWifi,
+          'frontal': bodyRedWifi,
+          'lateral': bodyRedWifi,
+          'posterior': bodyRedWifi,
+        };
+      }
       await globalCollCredentials.save(bodyCredentials);
     }
     catch(e){
-      await insertNameInCredentials(newBody); //si hay un error, llame de nuevo la funcion
+      print(e);
+      await insertRuteroInCredentials(newBody); //si hay un error, llame de nuevo la funcion
     }
   }
 
   Future<void> updateRuterosInToServer(Map<String, dynamic> newBody, String idUpdate) async {
     try{
-      Map<String, dynamic> newBody2;
-      dynamic ind, vl, ind2;
+      Map<String, dynamic> newBody2 = null;
+      dynamic ind = null, vl = null, ind2 = null;
       await globalCollServer.find().forEach((data) async {
         for(var value in data['users']){
           for(var value2 in value['ruteros']){

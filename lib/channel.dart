@@ -135,29 +135,35 @@ class RuteroServerChannel extends ApplicationChannel {
       .route("$urlBase")
       .link(() => ConsultServer());
 
-    //consultar rutero especifico por medio de su id //FALTA PROBAR
+    //consultar rutero especifico por medio de su id
     router
       .route("$urlBase/Devices/ID/[:ident]")
       .link(() => ConsultDevices());
 
-    //consultar rutero usando su nombre //FALTA PROBAR
+    //consultar rutero usando su nombre
     router
       .route("$urlBase/Devices/Name/[:NameDevice]")
       .link(() => ConsultDevices());
 
-    //consulta las credenciales de un rutero en especifico //FALTA PROBAR
+    //////////////consulta con las credenciales////////////
+    //consulta las credenciales de un rutero en especifico
     router
       .route("$urlBase/Credentials/Name/[:NameDevice]")
       .link(() => ConsultCredentials());
 
-    //consultar todas las credenciales de todos los ruteros //LISTO
+    //consultar todas las credenciales de todos los ruteros
     router
       .route("$urlBase/Credentials")
       .link(() => ConsultCredentials());
 
-    //actualiza la informacion de las credenciales //FALTA PROBAR
+    //actualiza la informacion de las credenciales con el id
     router
-      .route("$urlBase/Credentials/UpdateByName/[:Name]")
+      .route("$urlBase/Credentials/UpdateById/[:idDevice]")
+      .link(() => ConsultCredentials());
+
+    //inserta en credenciales una nueva nueva informacion si el rutero existe o no
+    router
+      .route("$urlBase/Credentials/NewCredentials/[:newName]")
       .link(() => ConsultCredentials());
 
     return router;

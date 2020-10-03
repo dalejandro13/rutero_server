@@ -70,8 +70,8 @@ class ConsultCredentials extends ResourceController{
     }
   }
 
-  @Operation.put('idDevice') //actualiza la informacion de las credenciales
-  Future<Response> putDataRuteros(@Bind.path('idDevice') String ident) async {
+  @Operation.put('newName') //actualiza la informacion de las credenciales
+  Future<Response> putDataRuteros(@Bind.path('newName') String ident) async {
     try{
       Map<String, dynamic> newBody = null;
       start = false;
@@ -86,7 +86,8 @@ class ConsultCredentials extends ResourceController{
         if(body['ssid'] != "" && body['pass'] != ""){
           if(body['ssid'] != null && body['pass'] != null){
             await globalCollCredentials.find().forEach((data) async {
-              if(ObjectId.fromHexString(ident) == data['_id']){
+              //if(ObjectId.fromHexString(ident) == data['_id']){
+              if(data['deviceName'] == ident){
                 newBody = {
                   "_id": data['_id'],
                   "deviceName": data['deviceName'],
@@ -99,7 +100,8 @@ class ConsultCredentials extends ResourceController{
             });
 
             if(newBody != null){
-              await globalCollCredentials.remove(where.eq('_id', ObjectId.fromHexString(ident))); //await globalCollCredentials.findOne({'_id': ident}));
+              //await globalCollCredentials.remove(where.eq('_id', ObjectId.fromHexString(ident))); //await globalCollCredentials.findOne({'_id': ident}));
+              await globalCollCredentials.remove(where.eq('deviceName', ident)); //await globalCollCredentials.findOne({'_id': ident}));
               await globalCollCredentials.save(newBody);
               await admon.close();
               return Response.ok(newBody);

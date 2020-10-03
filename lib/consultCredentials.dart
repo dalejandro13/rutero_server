@@ -105,6 +105,7 @@ class ConsultCredentials extends ResourceController{
               return Response.ok(newBody);
             }
             else{
+              await admon.close();
               return Response.badRequest(body: {"ERROR": "este rutero no existe en la base de datos, verifica nuevamente la informacion"});
             }
           }
@@ -125,17 +126,86 @@ class ConsultCredentials extends ResourceController{
     }
   }
 
-  @Operation.post('newName') //ingresa datos de ruteros nuevos a los clientes que ya existan en la base de datos, ya sea por su nombre o por su id
+  @Operation.post('newName') //ingresa datos de ruteros nuevos a los clientes que ya existan en la base de datos, usando su nombre
   Future<Response> createDataRuteros(@Bind.path('newName') String newName) async {
     try{
-      await globalCollDevice.find().forEach((data) async {
-        for(var vv in data['ruteros']){
-          if(vv['name'] == newName){
-            //CONTINUA ACA
+      Map<String, dynamic> bodyRedWifi = null, bodyCredentials = null;
+      bool enterData = true;
+      start = false;
+      await globalCollServer.find().forEach((data) async {
+        if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
+          start = true;
+        }
+      });
+
+      if(start){
+        await globalCollDevice.find().forEach((data) async {
+          for(var vv in data['ruteros']){
+            if(vv['name'] == newName){
+              bodyRedWifi = {
+                'ssid': '--',
+                'pass': '--'
+              };
+              bodyCredentials = {
+                '_id': vv['id'],
+                'deviceName': newName,
+                'networkInterface': bodyRedWifi,
+                'frontal': bodyRedWifi,
+                'lateral': bodyRedWifi,
+                'posterior': bodyRedWifi,
+              };
+            }
+          }
+        });
+
+        if(bodyCredentials != null){
+
+          await globalCollCredentials.find().forEach((data) async {
+            if(data["deviceName"] == newName){
+              enterData = false;
+            }
+          });
+
+          if(enterData){
+            await globalCollCredentials.save(bodyCredentials);
+            await admon.close();
+            return Response.ok(bodyCredentials);
+          }
+          else{
+            return Response.badRequest(body: {"ERROR": "el rutero $newName ya esta registrado en las credenciales, intenta con otro nombre de rutero"});
           }
         }
-        return Response.ok("ingresando nuevas credenciales: $newName");
+        else{
+          await admon.close();
+          return Response.badRequest(body: {"ERROR": "el rutero $newName no se encuentra en la base de datos, intenta con otro nombre de rutero"});
+        }
+      }
+    }
+    catch(e){
+      await admon.close();
+      return Response.badRequest(body: {"ERROR": e.toString()});
+    }
+  }
+
+  @Operation.delete('name') //borra el rutero por medio de la id
+  Future<Response> deleteRuteroForId(@Bind.path('name') String nameDelete) async {
+    bool readyToDelete = false;
+    try{
+      await globalCollCredentials.find().forEach((data) async {
+        if(data['deviceName'] == nameDelete){
+          readyToDelete = true;
+        }
       });
+
+      if(readyToDelete){
+        await globalCollCredentials.remove(where.eq('deviceName', nameDelete)); //borra el rutero de la coleccion de credenciales
+        await admon.close();
+        return Response.ok("el rutero $nameDelete ha sido borrado de credenciales");
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "el rutero $nameDelete no existe en las credenciales"});
+      }
     }
     catch(e){
       await admon.close();

@@ -245,7 +245,7 @@ class ConsultDevices extends ResourceController {
     //String os = Platform.operatingSystem;
     bool start = false;
     ready = false;
-    bool ready2 = true;
+    bool ready2 = true, ready3 = true;
     dynamic rut = null;
     Map<String, dynamic> body = null;
     Map<String, dynamic> newBody = null;
@@ -297,41 +297,31 @@ class ConsultDevices extends ResourceController {
       if(start){
         if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && online != "" && update != "" && gps != ""){
           if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && online != null && update != null && gps != null){
-            await globalCollUser.find().forEach((data) async {
-              if(data['name'] == nmOrId || data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
-                ready = true;
-                for(var vv in data['ruteros']){
-                  if(vv['name'] == name){ //si existe un nombre repetido para este usuario ponga ready2 en false para que no ingrese en la base de datos
-                    ready2 = false;
-                  }
+
+            await globalCollDevice.find().forEach((data) async {
+              for(var jj in data['ruteros']){
+                if(jj['name'] == name){
+                  ready3 = false;
                 }
               }
             });
 
-            if(ready){
-              if(ready2){
-                value = await globalCollUser.findOne({"name": nmOrId });
-                if(value != null){
-                  var value2 = value['ruteros'];
-                  if(value2 != null){
-                    rut = value2;
-                    rut.add(newBody);
-                    value2 = rut;
-                    await globalCollUser.save(value);
-                  }
-                  else{
-                    await globalCollUser.find().forEach((data) async {
-                      if(data['name'] == nmOrId){
-                        rut = data['ruteros'];
-                        rut.add(newBody);
-                        data['ruteros'] = rut;
-                        await globalCollUser.save(data);
-                      }
-                    });
+            if(ready3){
+
+              await globalCollUser.find().forEach((data) async {
+                if(data['name'] == nmOrId || data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
+                  ready = true;
+                  for(var vv in data['ruteros']){
+                    if(vv['name'] == name){ //si existe un nombre repetido para este usuario ponga ready2 en false para que no ingrese en la base de datos
+                      ready2 = false;
+                    }
                   }
                 }
-                else{
-                  value = await globalCollUser.findOne({"_id": ObjectId.fromHexString(nmOrId)});
+              });
+
+              if(ready){
+                if(ready2){
+                  value = await globalCollUser.findOne({"name": nmOrId });
                   if(value != null){
                     var value2 = value['ruteros'];
                     if(value2 != null){
@@ -342,7 +332,7 @@ class ConsultDevices extends ResourceController {
                     }
                     else{
                       await globalCollUser.find().forEach((data) async {
-                        if(data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
+                        if(data['name'] == nmOrId){
                           rut = data['ruteros'];
                           rut.add(newBody);
                           data['ruteros'] = rut;
@@ -351,28 +341,54 @@ class ConsultDevices extends ResourceController {
                       });
                     }
                   }
-                }
+                  else{
+                    value = await globalCollUser.findOne({"_id": ObjectId.fromHexString(nmOrId)});
+                    if(value != null){
+                      var value2 = value['ruteros'];
+                      if(value2 != null){
+                        rut = value2;
+                        rut.add(newBody);
+                        value2 = rut;
+                        await globalCollUser.save(value);
+                      }
+                      else{
+                        await globalCollUser.find().forEach((data) async {
+                          if(data['_id'] == ObjectId.fromHexString(nmOrId) || data['_id'] == nmOrId){
+                            rut = data['ruteros'];
+                            rut.add(newBody);
+                            data['ruteros'] = rut;
+                            await globalCollUser.save(data);
+                          }
+                        });
+                      }
+                    }
+                  }
 
-                var result = await insertInfoRuteroInServer(newBody, ready, nmOrId, objectId);
+                  var result = await insertInfoRuteroInServer(newBody, ready, nmOrId, objectId);
 
-                if(result.item1){
-                  await insertRuteroInCredentials(newBody);
-                  await admon.close();
-                  return Response.ok(result.item2);
+                  if(result.item1){
+                    await insertRuteroInCredentials(newBody);
+                    await admon.close();
+                    return Response.ok(result.item2);
+                  }
+                  else{
+                    await admon.close();
+                    return Response.badRequest(body: {"ERROR": "los datos no se pudieron guardar, intentalo nuevamente"});
+                  }
                 }
                 else{
                   await admon.close();
-                  return Response.badRequest(body: {"ERROR": "los datos no se pudieron guardar, intentalo nuevamente"});
+                  return Response.badRequest(body: {"ERROR": "el nombre de este rutero ya existe para este usuario, cambia el nombre"});
                 }
               }
               else{
                 await admon.close();
-                return Response.badRequest(body: {"ERROR": "el nombre de este rutero ya existe para este usuario, cambia el nombre"});
+                return Response.badRequest(body: {"ERROR": "El cliente no se encuentra registrado en la base de datos"});
               }
             }
             else{
               await admon.close();
-              return Response.badRequest(body: {"ERROR": "El cliente no se encuentra registrado en la base de datos"});
+              return Response.badRequest(body: {"ERROR": "el rutero de nombre $name ya esta registrado en la base de datos, cambia de nombre"});
             }
           }
           else{
@@ -398,10 +414,12 @@ class ConsultDevices extends ResourceController {
 
   @Operation.put('idupdate') //actualiza la informacion del rutero identificado con idUpdate
   Future<Response> updateDataRuteros(@Bind.path('idupdate') String idUpdate) async {
-    bool start = false;
-    dynamic ind = null, oldName = null;
-    //String os = Platform.operatingSystem;
     try{
+      bool start = false;
+      bool startForName = false, startForId = false;
+      dynamic ind = null, oldName = null; //idUpdt = null;
+      //String os = Platform.operatingSystem;
+      //String idUpdt = null;
       Map<String, dynamic> newBody = null, body = null;
       dynamic os = null, name = null, chasis = null, pmr = null, routeIndex = null, status = null, publicIP = null, sharedIP = null, version = null, appVersion = null, panic = null, online = null, update = null, gps = null;
       body = await request.body.decode();
@@ -469,7 +487,23 @@ class ConsultDevices extends ResourceController {
         await globalCollUser.find().forEach((data) async {
           if(data['ruteros'] != null && data['ruteros'].length != 0){
             for(var val in data['ruteros']){
+              
+              // try{
+              //   if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
+              //     startForId = true;
+              //     idUpdt = idUpdate;
+              //   }
+              // }
+              // catch(e){
+              //   if(val['name'] == idUpdate){
+              //     startForName = true;
+              //     idUpdt = val['id'];
+              //   }
+              // }
+
               if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
+                startForId = false;
+                startForName = false;
                 oldName ??= val['name']; //consulta antiguo nombre de la base de datos
                 os ??= val['OS'];
                 name ??= val['name'];
@@ -485,26 +519,26 @@ class ConsultDevices extends ResourceController {
                 online ??= val['onlineDevices'];
                 update ??= val['update'];
                 gps ??= val['GPS'];
-
-                newBody = {
-                  'id': ObjectId.fromHexString(idUpdate),
-                  'OS': os,
-                  'name': name,
-                  'chasis': chasis,
-                  'PMR': pmr,
-                  'routeIndex': routeIndex,
-                  'status': status,
-                  'publicIP': publicIP,
-                  'sharedIP': sharedIP,
-                  'version': version,
-                  'appVersion': appVersion,
-                  'panic': panic,
-                  'onlineDevices': online,
-                  'update': update,
-                  'GPS': gps,
-                };
-
                 try{
+                  newBody = {
+                    'id': ObjectId.fromHexString(idUpdate),
+                    'OS': os,
+                    'name': name,
+                    'chasis': chasis,
+                    'PMR': pmr,
+                    'routeIndex': routeIndex,
+                    'status': status,
+                    'publicIP': publicIP,
+                    'sharedIP': sharedIP,
+                    'version': version,
+                    'appVersion': appVersion,
+                    'panic': panic,
+                    'onlineDevices': online,
+                    'update': update,
+                    'GPS': gps,
+                  };
+
+                
                   var value2 = data['ruteros']; //DE MUESTRA
                   value2.forEach((k){
                     if(val['id'] == k['id']){

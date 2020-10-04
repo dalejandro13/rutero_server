@@ -415,8 +415,8 @@ class ConsultDevices extends ResourceController {
   @Operation.put('idupdate') //actualiza la informacion del rutero identificado con idUpdate
   Future<Response> updateDataRuteros(@Bind.path('idupdate') String idUpdate) async {
     try{
-      bool start = false;
-      bool startForName = false, startForId = false;
+      bool start = false, start2 = true;
+      //bool startForName = false, startForId = false;
       dynamic ind = null, oldName = null; //idUpdt = null;
       //String os = Platform.operatingSystem;
       //String idUpdt = null;
@@ -483,99 +483,115 @@ class ConsultDevices extends ResourceController {
         }
       });
 
-      if(start){
-        await globalCollUser.find().forEach((data) async {
-          if(data['ruteros'] != null && data['ruteros'].length != 0){
-            for(var val in data['ruteros']){
-              
-              // try{
-              //   if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
-              //     startForId = true;
-              //     idUpdt = idUpdate;
-              //   }
-              // }
-              // catch(e){
-              //   if(val['name'] == idUpdate){
-              //     startForName = true;
-              //     idUpdt = val['id'];
-              //   }
-              // }
-
-              if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
-                startForId = false;
-                startForName = false;
-                oldName ??= val['name']; //consulta antiguo nombre de la base de datos
-                os ??= val['OS'];
-                name ??= val['name'];
-                chasis ??= val['chasis'];
-                pmr ??= val['PMR'];
-                routeIndex ??= val['routeIndex'];
-                status ??= val['status'];
-                publicIP ??= val['publicIP'];
-                sharedIP ??= val['sharedIP'];
-                version ??= val['version'];
-                appVersion ??= val['appVersion'];
-                panic ??= val['panic'];
-                online ??= val['onlineDevices'];
-                update ??= val['update'];
-                gps ??= val['GPS'];
-                try{
-                  newBody = {
-                    'id': ObjectId.fromHexString(idUpdate),
-                    'OS': os,
-                    'name': name,
-                    'chasis': chasis,
-                    'PMR': pmr,
-                    'routeIndex': routeIndex,
-                    'status': status,
-                    'publicIP': publicIP,
-                    'sharedIP': sharedIP,
-                    'version': version,
-                    'appVersion': appVersion,
-                    'panic': panic,
-                    'onlineDevices': online,
-                    'update': update,
-                    'GPS': gps,
-                  };
-
-                
-                  var value2 = data['ruteros']; //DE MUESTRA
-                  value2.forEach((k){
-                    if(val['id'] == k['id']){
-                      ind = value2.indexOf(k);                        
-                    }
-                  });
-
-                  value2.removeAt(ind);
-
-                  if(value2 != null){
-                    var rut = value2;
-                    rut.add(newBody);
-                    val = rut;
-                    ready = true;
-                    await globalCollUser.save(data);
-                  }
-                }
-                catch(e){
-                  ready = false;
-                  print(e);
-                }
-              }
+      if(name != null){
+        await globalCollDevice.find().forEach((data) async {
+          for(var vv in data['ruteros']){
+            if(vv[ 'name'].toString().toLowerCase().trim() == name.toString().toLowerCase().trim()){
+              start2 = false;
             }
           }
         });
-        
-        if(ready){
-          if(name != null){
-            await updateDeviceNameInCredentials(name, oldName, idUpdate);
+      }
+
+      if(start){
+        if(start2){
+          await globalCollUser.find().forEach((data) async {
+            if(data['ruteros'] != null && data['ruteros'].length != 0){
+              for(var val in data['ruteros']){
+                
+                // try{
+                //   if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
+                //     startForId = true;
+                //     idUpdt = idUpdate;
+                //   }
+                // }
+                // catch(e){
+                //   if(val['name'] == idUpdate){
+                //     startForName = true;
+                //     idUpdt = val['id'];
+                //   }
+                // }
+
+                if(val['id'] == ObjectId.fromHexString(idUpdate) || val['id'] == idUpdate){
+                  // startForId = false;
+                  // startForName = false;
+                  oldName ??= val['name']; //consulta antiguo nombre de la base de datos
+                  os ??= val['OS'];
+                  name ??= val['name'];
+                  chasis ??= val['chasis'];
+                  pmr ??= val['PMR'];
+                  routeIndex ??= val['routeIndex'];
+                  status ??= val['status'];
+                  publicIP ??= val['publicIP'];
+                  sharedIP ??= val['sharedIP'];
+                  version ??= val['version'];
+                  appVersion ??= val['appVersion'];
+                  panic ??= val['panic'];
+                  online ??= val['onlineDevices'];
+                  update ??= val['update'];
+                  gps ??= val['GPS'];
+                  try{
+                    newBody = {
+                      'id': ObjectId.fromHexString(idUpdate),
+                      'OS': os,
+                      'name': name,
+                      'chasis': chasis,
+                      'PMR': pmr,
+                      'routeIndex': routeIndex,
+                      'status': status,
+                      'publicIP': publicIP,
+                      'sharedIP': sharedIP,
+                      'version': version,
+                      'appVersion': appVersion,
+                      'panic': panic,
+                      'onlineDevices': online,
+                      'update': update,
+                      'GPS': gps,
+                    };
+
+                  
+                    var value2 = data['ruteros']; //DE MUESTRA
+                    value2.forEach((k){
+                      if(val['id'] == k['id']){
+                        ind = value2.indexOf(k);                        
+                      }
+                    });
+
+                    value2.removeAt(ind);
+
+                    if(value2 != null){
+                      var rut = value2;
+                      rut.add(newBody);
+                      val = rut;
+                      ready = true;
+                      await globalCollUser.save(data);
+                    }
+                  }
+                  catch(e){
+                    ready = false;
+                    print(e);
+                  }
+                }
+              }
+            }
+          });
+          
+          if(ready){
+            if(name != null){
+              await updateDeviceNameInCredentials(name, oldName, idUpdate);
+            }
+            await updateRuterosInToServer(newBody, idUpdate);
+            await admon.close();
+            return Response.ok(newBody);
           }
-          await updateRuterosInToServer(newBody, idUpdate);
-          await admon.close();
-          return Response.ok(newBody);
+          else{
+            await admon.close();
+            return Response.badRequest(body: {"ERROR": "Este rutero no existe en la base de datos"});
+          }
         }
         else{
           await admon.close();
-          return Response.badRequest(body: {"ERROR": "Este rutero no existe en la base de datos"});
+          return Response.badRequest(body: {"ERROR": "el nombre del rutero ya existe en la base de datos, cambia el nombre"});
         }
       }
       else{

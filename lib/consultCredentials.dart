@@ -70,8 +70,8 @@ class ConsultCredentials extends ResourceController{
     }
   }
 
-  @Operation.put('newName') //actualiza la informacion de las credenciales
-  Future<Response> putDataRuteros(@Bind.path('newName') String ident) async {
+  @Operation.put('name') //actualiza la informacion de las credenciales
+  Future<Response> putDataRuteros(@Bind.path('name') String ident) async {
     try{
       Map<String, dynamic> newBody = null;
       start = false;

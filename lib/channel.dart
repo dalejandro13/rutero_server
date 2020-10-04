@@ -156,9 +156,9 @@ class RuteroServerChannel extends ApplicationChannel {
       .route("$urlBase/Credentials")
       .link(() => ConsultCredentials());
 
-    //actualiza la informacion de las credenciales con el id
+    //actualiza la informacion de las credenciales con el nombre
     router
-      .route("$urlBase/Credentials/UpdateById/[:idDevice]")
+      .route("$urlBase/Credentials/UpdateByName/[:name]")
       .link(() => ConsultCredentials());
 
     //inserta en credenciales una nueva nueva informacion si el rutero existe
@@ -166,6 +166,7 @@ class RuteroServerChannel extends ApplicationChannel {
       .route("$urlBase/Credentials/NewCredentials/[:newName]")
       .link(() => ConsultCredentials());
 
+    //borra rutero solo en las credenciales
     router
       .route("$urlBase/Credentials/DeleteCredentials/[:name]")
       .link(() => ConsultCredentials());

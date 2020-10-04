@@ -141,7 +141,7 @@ class ConsultCredentials extends ResourceController{
       });
 
       if(start){
-        await globalCollDevice.find().forEach((data) async {
+        await globalCollDevice.find().forEach((data) async { //consulta con la coleccion de device
           for(var vv in data['ruteros']){
             if(vv['name'] == newName){
               bodyRedWifi = {

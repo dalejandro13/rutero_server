@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:tuple/tuple.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:rutero_server/adminDB.dart';
@@ -111,30 +110,30 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  @Operation.get('nameClient')
-  Future<Response> getInfoClient(@Bind.path('nameClient') String name) async {
-    try{
-      Map<String, dynamic> mapeo = null;
-      await globalCollUser.find().forEach((info) {
-        if(info['name'] == name){
-          mapeo = {'name': info['name'], 'password': info['password'], 'ftp': info['ftp']};
-        }
-      });
+  // @Operation.get('nameClient')
+  // Future<Response> getInfoClient(@Bind.path('nameClient') String name) async {
+  //   try{
+  //     Map<String, dynamic> mapeo = null;
+  //     await globalCollUser.find().forEach((info) {
+  //       if(info['name'] == name){
+  //         mapeo = {'name': info['name'], 'password': info['password'], 'ftp': info['ftp']};
+  //       }
+  //     });
 
-      if(mapeo != null){
-        await admon.close();
-        return Response.ok(mapeo);
-      }
-      else{
-        await admon.close();
-        return Response.badRequest(body: {"ERROR": "Este usuario no existe en la base de datos, verifica la informacion"});
-      }
-    }
-    catch(e){
-      await admon.close();
-      return Response.badRequest(body: {"ERROR": e.toString()});
-    }
-  }
+  //     if(mapeo != null){
+  //       await admon.close();
+  //       return Response.ok(mapeo);
+  //     }
+  //     else{
+  //       await admon.close();
+  //       return Response.badRequest(body: {"ERROR": "Este usuario no existe en la base de datos, verifica la informacion"});
+  //     }
+  //   }
+  //   catch(e){
+  //     await admon.close();
+  //     return Response.badRequest(body: {"ERROR": e.toString()});
+  //   }
+  // }
 
   @Operation.post() //ingresar nuevo usuario si no existe
   Future<Response> createClient() async{
@@ -244,6 +243,7 @@ class ConsultDevices extends ResourceController {
   Future<Response> createDataRuteros(@Bind.path('nameorid') String nmOrId) async {
     //String os = Platform.operatingSystem;
     bool start = false;
+    int connectionIntent = 0;
     ready = false;
     bool ready2 = true, ready3 = true;
     dynamic rut = null;
@@ -286,6 +286,7 @@ class ConsultDevices extends ResourceController {
         'onlineDevices': online,
         'update': update,
         'GPS': gps,
+        'connectionIntent': connectionIntent
       };
 
       await globalCollServer.find().forEach((data) async {
@@ -295,8 +296,8 @@ class ConsultDevices extends ResourceController {
       });
 
       if(start){
-        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && online != "" && update != "" && gps != ""){
-          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && online != null && update != null && gps != null){
+        if(name != "" && chasis != "" && pmr != "" && routeIndex != "" && status != "" && publicIP != "" && sharedIP != "" && version != "" && appVersion != "" && panic != "" && online != "" && update != "" && gps != "" && connectionIntent != ""){
+          if(name != null && chasis != null && pmr != null && routeIndex != null && status != null && publicIP != null && sharedIP != null && version != null && appVersion != null && panic != null && online != null && update != null && gps != null && connectionIntent != null){
 
             await globalCollDevice.find().forEach((data) async {
               for(var jj in data['ruteros']){
@@ -421,7 +422,7 @@ class ConsultDevices extends ResourceController {
       //String os = Platform.operatingSystem;
       //String idUpdt = null;
       Map<String, dynamic> newBody = null, body = null;
-      dynamic os = null, name = null, chasis = null, pmr = null, routeIndex = null, status = null, publicIP = null, sharedIP = null, version = null, appVersion = null, panic = null, online = null, update = null, gps = null;
+      dynamic os = null, name = null, chasis = null, pmr = null, routeIndex = null, status = null, publicIP = null, sharedIP = null, version = null, appVersion = null, panic = null, online = null, update = null, gps = null, connectionIntent = null;
       body = await request.body.decode();
       if(body['OS'] != "" && body['OS'] != null){
         os = body['OS'].trim();
@@ -474,6 +475,11 @@ class ConsultDevices extends ResourceController {
       }
       if(body['GPS'] != "" && body['GPS'] != null){
         gps = body['GPS'].trim();
+      }
+      if(body['connectionIntent'] != "" && body['connectionIntent'] != null){
+        if(body['connectionIntent'].runtimeType == int){
+          connectionIntent = body['connectionIntent'];
+        }
       }
       ready = false;
 
@@ -530,6 +536,7 @@ class ConsultDevices extends ResourceController {
                   online ??= val['onlineDevices'];
                   update ??= val['update'];
                   gps ??= val['GPS'];
+                  connectionIntent ??= val['connectionIntent'];
                   try{
                     newBody = {
                       'id': ObjectId.fromHexString(idUpdate),
@@ -547,6 +554,7 @@ class ConsultDevices extends ResourceController {
                       'onlineDevices': online,
                       'update': update,
                       'GPS': gps,
+                      'connectionIntent': connectionIntent,
                     };
 
                   
@@ -944,6 +952,7 @@ class ConsultDevices extends ResourceController {
               'onlineDevices': body['onlineDevices'],
               'update': body['update'],
               'GPS': body['GPS'],
+              'connectionIntent': body['connectionIntent'],
             };
           }
         }
@@ -1051,6 +1060,7 @@ class ConsultDevices extends ResourceController {
                 'onlineDevices': newBody['onlineDevices'],
                 'update': newBody['update'],
                 'GPS': newBody['GPS'],
+                'connectionIntent': newBody['connectionIntent'],
               };
 
               var value3 = value['ruteros'];

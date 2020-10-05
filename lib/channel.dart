@@ -9,20 +9,15 @@ import 'rutero_server.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart';
 
-
-//181.140.181.103 -> NUEVA IP PUBLICA DEL SERVIDOR
-
 /// This type initializes an application.
 ///
 /// Override methods in this class to set up routes and initialize services like
 /// database connections. See http://aqueduct.io/docs/http/channel/.
-
-
+/// 
 class RuteroServerChannel extends ApplicationChannel {
 
   Variables variables;
   String urlBase, urlBase2;
-
   RuteroServerChannel(){
     variables = Variables();
     urlBase = "Api/FlexoRuteros";
@@ -30,19 +25,19 @@ class RuteroServerChannel extends ApplicationChannel {
     //"http://localhost:9742/Api/FlexoRuteros/Buses/GetAllDevices/[:idDevice]"
   }
 
-  Future<void> getPublicIPAddress() async {
-    try{
-      final response = await http.get('http://checkip.dyndns.org/');
-      final document = parse(parse(response.body).body.text);
-      final getString = document.documentElement.text;
-      variables.ip = getString.substring(getString.indexOf(':') + 2, getString.length).trim();
-    }
-    catch(e){
-      print('Error: $e');
-    }
-    await Future.delayed(const Duration(minutes: 5));
-    await getPublicIPAddress();
-  }
+  // Future<void> getPublicIPAddress() async {
+  //   try{
+  //     final response = await http.get('http://checkip.dyndns.org/');
+  //     final document = parse(parse(response.body).body.text);
+  //     final getString = document.documentElement.text;
+  //     variables.ip = getString.substring(getString.indexOf(':') + 2, getString.length).trim();
+  //   }
+  //   catch(e){
+  //     print('Error: $e');
+  //   }
+  //   await Future.delayed(const Duration(minutes: 5));
+  //   await getPublicIPAddress();
+  // }
 
   /// Initialize services in this method.
   ///
@@ -73,6 +68,11 @@ class RuteroServerChannel extends ApplicationChannel {
     router
       .route("$urlBase/Users")
       .link(() => ConsultUsers());
+
+    //consultar contraseña y ftp del usuario
+    router
+      .route("$urlBase/Users/GetByName/[:nameClient]")
+      .link(() => ConsultUsers());
     
     //consultar todos los ruteros en device
     router
@@ -87,11 +87,6 @@ class RuteroServerChannel extends ApplicationChannel {
     //consultar todos los ruteros por el nombre del usuario
     router
       .route("$urlBase/Devices/GetByUserName/[:name]")
-      .link(() => ConsultDevices());
-
-    //consultar toda la informacion del usuario junto con los ruteros que tenga registrado
-    router
-      .route("$urlBase/Devices/ConsultInfoUser/[:nameClient]")
       .link(() => ConsultDevices());
 
     //ingresa un nuevo usuario si no existe (post)
@@ -111,7 +106,7 @@ class RuteroServerChannel extends ApplicationChannel {
 
     //ingresar o actualizar password y ftp en los usuarios de la base de datos con el nombre del usuario
     router
-      .route("$urlBase/Users/UpdatePass/[:nameUser]")
+      .route("$urlBase/Users/UpdateCredentials/[:nameUser]")
       .link(() => ConsultDevices());
 
     //Elimina rutero por medio de su id (delete)
@@ -148,7 +143,7 @@ class RuteroServerChannel extends ApplicationChannel {
     //////////////consulta con las credenciales////////////
     //consulta las credenciales de un rutero en especifico
     router
-      .route("$urlBase/Credentials/Name/[:NameDevice]")
+      .route("$urlBase/Credentials/GetByName/[:NameDevice]")
       .link(() => ConsultCredentials());
 
     //consultar todas las credenciales de todos los ruteros

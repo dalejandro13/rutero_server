@@ -71,9 +71,17 @@ class ConsultCredentials extends ResourceController{
   }
 
   @Operation.put('name') //actualiza la informacion de las credenciales
-  Future<Response> putDataRuteros(@Bind.path('name') String ident) async {
+  Future<Response> putDataRuteros(@Bind.path('name') String nameIdent) async {
     try{
-      Map<String, dynamic> newBody = null;
+      Map<String, dynamic> newBody = null, body = null;
+      dynamic networkInterface = null, frontal = null, lateral = null, posterior = null;
+
+      body = await request.body.decode();
+      networkInterface = body['networkInterface'];
+      frontal = body['frontal'];
+      lateral = body['lateral'];
+      posterior = body['posterior'];
+
       start = false;
       await globalCollServer.find().forEach((data) async {
         if(data['version'] != "" && data['appVersion'] != "" && data['version'] != null && data['appVersion'] != null){
@@ -82,44 +90,45 @@ class ConsultCredentials extends ResourceController{
       });
 
       if(start){
-        final Map<String, dynamic> body = await request.body.decode();
-        if(body['ssid'] != "" && body['pass'] != ""){
-          if(body['ssid'] != null && body['pass'] != null){
-            await globalCollCredentials.find().forEach((data) async {
-              //if(ObjectId.fromHexString(ident) == data['_id']){
-              if(data['deviceName'] == ident){
-                newBody = {
-                  "_id": data['_id'],
-                  "deviceName": data['deviceName'],
-                  "networkInterface": {"ssid": body['ssid'],"pass": body['pass']},
-                  "frontal": {"ssid": body['ssid'], "pass": body['pass']},
-                  "lateral": {"ssid": body['ssid'], "pass": body['pass']},
-                  "posterior": {"ssid": body['ssid'], "pass": body['pass']}
-                };
-              }
-            });
+        if(networkInterface == null){
+          networkInterface = {"ssid": "--","pass": "--"};
+        }
+        if(frontal == null){
+          frontal = {"ssid": "--","pass": "--"};
+        }
+        if(lateral == null){
+           lateral = {"ssid": "--","pass": "--"};
+        }
+        if(posterior == null){
+           posterior = {"ssid": "--","pass": "--"};
+        }        
+        await globalCollCredentials.find().forEach((data) async {
+          if(data['deviceName'].toString().toLowerCase().trim() == nameIdent.toLowerCase().trim()){
+            newBody = {
+              "_id": data['_id'],
+              "deviceName": data['deviceName'],
+              "networkInterface": networkInterface,
+              "frontal": frontal,
+              "lateral": lateral,
+              "posterior": posterior
+            };
+          }
+        });
 
-            if(newBody != null){
-              //await globalCollCredentials.remove(where.eq('_id', ObjectId.fromHexString(ident))); //await globalCollCredentials.findOne({'_id': ident}));
-              await globalCollCredentials.remove(where.eq('deviceName', ident)); //await globalCollCredentials.findOne({'_id': ident}));
-              await globalCollCredentials.save(newBody);
-              await admon.close();
-              return Response.ok(newBody);
-            }
-            else{
-              await admon.close();
-              return Response.badRequest(body: {"ERROR": "este rutero no existe en la base de datos, verifica nuevamente la informacion"});
-            }
-          }
-          else{
-            await admon.close();
-            return Response.badRequest(body: {"ERROR": "uno o ambos campos son nulos, verifica nuevamente"});
-          }
+        if(newBody != null){
+          await globalCollCredentials.remove(where.eq('deviceName', nameIdent)); //await globalCollCredentials.findOne({'_id': ident}));
+          await globalCollCredentials.save(newBody);
+          await admon.close();
+          return Response.ok(newBody);
         }
         else{
           await admon.close();
-          return Response.badRequest(body: {"ERROR": "falta un campo por completar, verifica nuevamente"});
+          return Response.badRequest(body: {"ERROR": "el rutero $nameIdent no existe en la base de datos, verifica nuevamente la informacion"});
         }
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "no se puede almacenar la informacion en la base de datos, intenta nuevamente"});
       }
     }
     catch(e){
@@ -189,12 +198,12 @@ class ConsultCredentials extends ResourceController{
     }
   }
 
-  @Operation.delete('name') //borra el rutero por medio de la id
+  @Operation.delete('name') //borra el rutero por medio de su nombre
   Future<Response> deleteRuteroForId(@Bind.path('name') String nameDelete) async {
     bool readyToDelete = false;
     try{
       await globalCollCredentials.find().forEach((data) async {
-        if(data['deviceName'] == nameDelete){
+        if(data['deviceName'].toString().toLowerCase().trim() == nameDelete.toLowerCase().trim()){
           readyToDelete = true;
         }
       });

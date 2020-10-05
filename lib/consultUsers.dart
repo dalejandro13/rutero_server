@@ -45,6 +45,31 @@ class ConsultUsers extends ResourceController {
     }
   }
 
+  @Operation.get('nameClient')
+  Future<Response> getInfoClient(@Bind.path('nameClient') String name) async {
+    try{
+      Map<String, dynamic> mapeo = null;
+      await globalCollUser.find().forEach((info) {
+        if(info['name'] == name){
+          mapeo = {'name': info['name'], 'password': info['password'], 'ftp': info['ftp']};
+        }
+      });
+
+      if(mapeo != null){
+        await admon.close();
+        return Response.ok(mapeo);
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "Este usuario no existe en la base de datos, verifica la informacion"});
+      }
+    }
+    catch(e){
+      await admon.close();
+      return Response.badRequest(body: {"ERROR": e.toString()});
+    }
+  }
+
   @Operation.delete('deleteuserkey') //borra el cliente por medio de la id o por el nombre
   Future<Response> deleteClientForId(@Bind.path('deleteuserkey') String keyDelete) async {
     dynamic ind;

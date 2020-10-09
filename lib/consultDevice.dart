@@ -28,18 +28,69 @@ class ConsultDevices extends ResourceController {
   @Operation.get()
   Future<Response> getDataInDevice() async {
     try{
-      List<dynamic> busesList = null;
-      busesList = [];
-      await globalCollDevice.find().forEach(busesList.add);
+      bool change = false;
+      String refA = null;
+      String refB = null;
+      String acum = null;
+      String resultA = null;
+      String resultB = null;
+      int valueA = 0;
+      int valueB = 0;
+      List<dynamic> devicesList = null;
+      devicesList = [];
+      await globalCollDevice.find().forEach((dev){
+        // ignore: prefer_foreach
+        for(var dd in dev['ruteros']){
+          devicesList.add(dd);
+        }
+      });
       
-      if(busesList.isNotEmpty){
+      if(devicesList.isNotEmpty){
+        acum = "";
+        refA = "";
+        refB = "";
+        resultA = "";
+        resultB = "";
+
+        devicesList.sort((a, b) {
+          refA = a['name'].toString();
+          refB = b['name'].toString();
+
+          for(int i = 0; i < refA.length; i++){
+            if(change){
+              acum += refA[i];
+            }
+            if(refA[i] == '-'){
+              change = true;
+            }
+          }
+          resultA = acum.replaceAll(RegExp("[a-zA-Z]"), '');
+          acum = "";
+          change = false;
+
+          for(int i = 0; i < refB.length; i++){
+            if(change){
+              acum += refB[i];
+            }
+            if(refB[i] == '-'){
+              change = true;
+            }
+          }
+          resultB = acum.replaceAll(RegExp("[a-zA-Z]"), '');
+          acum = "";
+          change = false;
+
+          valueA = int.parse(resultA);
+          valueB = int.parse(resultB);
+          return valueA.compareTo(valueB);
+        });
         await admon.close();
-        return Response.ok(busesList);
+        return Response.ok(devicesList);
       }
       else{
         await admon.close();
         return Response.badRequest(body: {"ERROR": "No hay informacion en Devices"});
-      }
+      }      
     }
     catch(e){
       await admon.close();
@@ -234,6 +285,61 @@ class ConsultDevices extends ResourceController {
     }
     catch(e){
       print("ERROR: ${e.toString()}");
+      await admon.close();
+      return Response.badRequest(body: {"ERROR": e.toString()});
+    }
+  }
+
+  @Operation.put() //actualiza el campo update de los ruteros dados por el body
+  Future<Response> update() async {
+    try{
+      List<dynamic> identList = null, listDuplicate = null;
+
+      Map<String, dynamic> body = null;
+      identList = [];
+      listDuplicate = [];
+      body = await request.body.decode();
+      final devices = body['devices'];
+
+      await globalCollDevice.find().forEach((data) async {
+          for(var vv in data['ruteros']){
+            for(var dd in devices){
+              if(vv['id'] == ObjectId.fromHexString(dd.toString())){
+                listDuplicate.add(dd.toString());
+                //await globalCollUser.update(where.eq('_id', dd.toString()), modify.set('update', false));
+            }
+          }
+        }
+      });
+
+      identList = listDuplicate.toSet().toList();
+
+      if(identList.isNotEmpty){
+        bool enab1 = true, enab2 = true, enab3 = true; //no olvidar cambiar todo esto a false
+        
+        enab1 = await updateUsers(identList); //actualizar en Users //todavia falta arreglar un error
+        // if(enab1){
+        //   enab2 = await updateDevices(identList); //actualizar en Devices //este ya esta listo
+        // }
+        // if(enab2){
+        //   enab3 = await updateServer(identList);
+        // }
+
+        if(enab1 && enab2 && enab3){
+          await admon.close();
+          return Response.ok(body = {"OK": "Actualizacion Exitosa"});
+        }
+        else{
+          await admon.close();
+          return Response.badRequest(body: {"ERROR": "no se puede actualizar la informacion, intentalo de nuevo"});
+        }
+      }
+      else{
+        await admon.close();
+        return Response.badRequest(body: {"ERROR": "has ingresado mal los identificadores, verifica la informacion"});
+      }
+    }
+    catch(e){
       await admon.close();
       return Response.badRequest(body: {"ERROR": e.toString()});
     }
@@ -1177,4 +1283,242 @@ class ConsultDevices extends ResourceController {
       return false;
     }
   }
+
+  Future<bool> updateUsers(List<dynamic> identList) async{
+    try{
+      dynamic dataID = null, nameUser = null, password = null, ftp = null;
+      Map<String, dynamic> newBody = null;
+      Map<String, dynamic> bodyUsers = null;
+      List<Map<String, dynamic>> listBodyUsers = null;
+      List<dynamic> tempBody;
+      int ctrlControl = 0;
+      dynamic id = null, os = null, name = null, chasis = null, pmr = null, routeIndex = null, status = null, publicIP = null, sharedIP = null, version = null, appVersion = null, panic = null, online = null, update = null, gps = null, connectionIntent = null;
+      tempBody = [];
+      listBodyUsers = [];
+
+      await globalCollUser.find().forEach((data) async {
+        dataID = data['_id'];
+        nameUser = data['name'];
+        password = data['password'];
+        tempBody = null;
+        tempBody = [];
+        ftp = data['ftp'];
+        for(var value in data['ruteros']){
+          ctrlControl = 0;
+          for(int x = 0; x < identList.length; x++){
+            if(ObjectId.fromHexString(identList[x].toString()) == value['id']){
+              newBody = {
+                'id': value['id'],
+                'OS': value['OS'],
+                'name': value['name'],
+                'chasis': value['chasis'],
+                'PMR': value['PMR'],
+                'routeIndex': value['routeIndex'],
+                'status': value['status'],
+                'publicIP': value['publicIP'],
+                'sharedIP': value['sharedIP'],
+                'version': value['version'],
+                'appVersion': value['appVersion'],
+                'panic': value['panic'],
+                'onlineDevices': value['onlineDevices'],
+                'update': false,
+                'GPS': value['GPS'],
+                'connectionIntent': value['connectionIntent'],
+              };
+              tempBody.add(newBody);
+              ctrlControl = 0;
+            }
+            else{
+              ctrlControl++;
+              if(ctrlControl >= identList.length){
+                ctrlControl = 0;
+                tempBody.add(value);
+              }
+            }
+          }
+          
+        }
+        bodyUsers = {
+          'id': dataID,
+          'name': nameUser,
+          'password': password,
+          'ftp': ftp,
+          'ruteros': tempBody,
+        };
+        listBodyUsers.add(bodyUsers);
+      });
+
+      if(listBodyUsers.isNotEmpty){
+        print("actualizando informacion");
+        //CONTINUA POR ACA
+        //await globalCollUser.update(where.eq('_id', dataID), modify.set('users', listBodyUsers)); //falta algo aca
+        return true;
+      }
+      else{
+        return false;
+      }      
+    }
+    catch(e){
+      print("Error $e");
+      return false;
+    }
+  }
+
+  Future<bool> updateDevices(List<dynamic> identList) async{
+    try{
+      int ctrlControl = 0;
+      List<dynamic> tempBody = null;
+      dynamic dataIdRef = null; 
+      Map<String, dynamic> newBody = null;
+      tempBody = [];
+
+      await globalCollDevice.find().forEach((data) async {
+
+        dataIdRef = data['_id'];
+        for(var val in data['ruteros']){
+          ctrlControl = 0;
+          for(int x = 0; x < identList.length; x++){
+            if(ObjectId.fromHexString(identList[x].toString()) == val['id']){
+              newBody = {
+                'id': val['id'],
+                'OS': val['OS'],
+                'name': val['name'],
+                'chasis': val['chasis'],
+                'PMR': val['PMR'],
+                'routeIndex': val['routeIndex'],
+                'status': val['status'],
+                'publicIP': val['publicIP'],
+                'sharedIP': val['sharedIP'],
+                'version': val['version'],
+                'appVersion': val['appVersion'],
+                'panic': val['panic'],
+                'onlineDevices': val['onlineDevices'],
+                'update': false,
+                'GPS': val['GPS'],
+                'connectionIntent': val['connectionIntent'],
+              };
+              
+              tempBody.add(newBody);
+              ctrlControl = 0;
+            }
+            else{
+              ctrlControl++;
+              if(ctrlControl >= identList.length){
+                ctrlControl = 0;
+                tempBody.add(val);
+              }
+            }
+          }
+        }
+      });
+
+      if(tempBody.isNotEmpty){
+        try{
+          await globalCollDevice.update(where.eq('_id', dataIdRef), modify.set('ruteros', tempBody));
+          return true;
+        }
+        catch(e){
+          print("Error $e");
+          return false;
+        }
+      }
+      else{
+        return false;
+      }
+    }
+    catch(e){
+      print("Error $e");
+      return false;
+    }
+  }
+
+  Future<bool> updateServer(List<dynamic> identList) async{
+    try{
+      dynamic id = null, version = null, appVersion = null, idUser = null, nameUser = null,
+      password = null, ftp = null;
+
+      int ctrlControl = 0;
+      Map<String, dynamic> newBody = null;
+      List<Map<String, dynamic>> listBodyUsers = null;
+      List<dynamic> bodyRuteros;
+      Map<String, dynamic> bodyUsers = null;
+      listBodyUsers = [];
+      await globalCollServer.find().forEach((data) async {
+        id = data['_id'];
+        version = data['version'];
+        appVersion = data['appVersion'];
+        for(var value in data['users']){
+          idUser = value['id'];
+          nameUser = value['name'];
+          password = value['password'];
+          ftp = value['ftp'];
+          bodyRuteros = null;
+          bodyRuteros = [];
+          for(var value2 in value['ruteros']){
+            ctrlControl = 0;
+            for(int x = 0; x < identList.length; x++){
+              if(value2['id'] == ObjectId.fromHexString(identList[x].toString())){
+                newBody = {
+                  'id': value2['id'],
+                  'OS': value2['OS'],
+                  'name': value2['name'],
+                  'chasis': value2['chasis'],
+                  'PMR': value2['PMR'],
+                  'routeIndex': value2['routeIndex'],
+                  'status': value2['status'],
+                  'publicIP': value2['publicIP'],
+                  'sharedIP': value2['sharedIP'],
+                  'version': value2['version'],
+                  'appVersion': value2['appVersion'],
+                  'panic': value2['panic'],
+                  'onlineDevices': value2['onlineDevices'],
+                  'update': false,
+                  'GPS': value2['GPS'],
+                  'connectionIntent': value2['connectionIntent'],
+                };
+                bodyRuteros.add(newBody);
+                ctrlControl = 0;
+              }
+              else{
+                ctrlControl++;
+                if(ctrlControl >= identList.length){
+                  ctrlControl = 0;
+                  bodyRuteros.add(value2);
+                }
+              }
+            }
+          }
+          bodyUsers = {
+            'id': idUser,
+            'name': nameUser,
+            'password': password,
+            'ftp': ftp,
+            'ruteros': bodyRuteros,
+          };
+          listBodyUsers.add(bodyUsers);
+        }
+      });
+
+      if(listBodyUsers.isNotEmpty){
+        if(listBodyUsers.isNotEmpty){
+          try{
+            await globalCollServer.update(where.eq('_id', id), modify.set('users', listBodyUsers));
+            return true;
+          }
+          catch(e){
+            print("Error $e");
+            return false;
+          }
+        }
+      }
+      else{
+        return false;
+      }
+    }
+    catch(e){
+      print("Error $e");
+      return false;
+    }
+  }
+
 }

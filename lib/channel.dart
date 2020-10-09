@@ -73,8 +73,8 @@ class RuteroServerChannel extends ApplicationChannel {
     router
       .route("$urlBase/Users/GetByName/[:nameClient]")
       .link(() => ConsultUsers());
-    
-    //consultar todos los ruteros en device
+        
+    //consultar todos los ruteros en device en orden
     router
       .route("$urlBase/Devices")
       .link(() => ConsultDevices());
@@ -92,6 +92,11 @@ class RuteroServerChannel extends ApplicationChannel {
     //ingresa un nuevo usuario si no existe (post)
     router
       .route("$urlBase/Users/CreateUsers")
+      .link(() => ConsultDevices());
+
+    //actualiza el campo de update en los ruteros datos
+    router
+      .route("$urlBase/Devices/Update")
       .link(() => ConsultDevices());
 
     //generar un nuevo rutero, si el nombre o la id coincide con el del usuario almacenado en la base de datos (post)

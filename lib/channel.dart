@@ -94,7 +94,7 @@ class RuteroServerChannel extends ApplicationChannel {
       .route("$urlBase/Users/CreateUsers")
       .link(() => ConsultDevices());
 
-    //actualiza el campo de update en los ruteros datos
+    //actualiza el campo de update en los ruteros de la base de datos
     router
       .route("$urlBase/Devices/Update")
       .link(() => ConsultDevices());

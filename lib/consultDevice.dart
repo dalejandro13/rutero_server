@@ -315,15 +315,15 @@ class ConsultDevices extends ResourceController {
       identList = listDuplicate.toSet().toList();
 
       if(identList.isNotEmpty){
-        bool enab1 = true, enab2 = true, enab3 = true; //no olvidar cambiar todo esto a false
+        bool enab1 = false, enab2 = false, enab3 = false;
         
-        enab1 = await updateUsers(identList); //actualizar en Users //todavia falta arreglar un error
-        // if(enab1){
-        //   enab2 = await updateDevices(identList); //actualizar en Devices //este ya esta listo
-        // }
-        // if(enab2){
-        //   enab3 = await updateServer(identList);
-        // }
+        enab1 = await updateUsers(identList); //actualizar en Users
+        if(enab1){
+          enab2 = await updateDevices(identList); //actualizar en Devices
+        }
+        if(enab2){
+          enab3 = await updateServer(identList); //actualizar en server
+        }
 
         if(enab1 && enab2 && enab3){
           await admon.close();
@@ -1284,20 +1284,22 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  Future<bool> updateUsers(List<dynamic> identList) async{
+  Future<bool> updateUsers(List<dynamic> identList) async {
     try{
       dynamic dataID = null, nameUser = null, password = null, ftp = null;
       Map<String, dynamic> newBody = null;
+      List<dynamic> listID = null;
       Map<String, dynamic> bodyUsers = null;
       List<Map<String, dynamic>> listBodyUsers = null;
       List<dynamic> tempBody;
       int ctrlControl = 0;
-      dynamic id = null, os = null, name = null, chasis = null, pmr = null, routeIndex = null, status = null, publicIP = null, sharedIP = null, version = null, appVersion = null, panic = null, online = null, update = null, gps = null, connectionIntent = null;
       tempBody = [];
       listBodyUsers = [];
+      listID = [];
 
       await globalCollUser.find().forEach((data) async {
         dataID = data['_id'];
+        listID.add(data['_id']);
         nameUser = data['name'];
         password = data['password'];
         tempBody = null;
@@ -1321,7 +1323,7 @@ class ConsultDevices extends ResourceController {
                 'appVersion': value['appVersion'],
                 'panic': value['panic'],
                 'onlineDevices': value['onlineDevices'],
-                'update': false,
+                'update': true,
                 'GPS': value['GPS'],
                 'connectionIntent': value['connectionIntent'],
               };
@@ -1336,10 +1338,9 @@ class ConsultDevices extends ResourceController {
               }
             }
           }
-          
         }
         bodyUsers = {
-          'id': dataID,
+          '_id': dataID,
           'name': nameUser,
           'password': password,
           'ftp': ftp,
@@ -1349,10 +1350,19 @@ class ConsultDevices extends ResourceController {
       });
 
       if(listBodyUsers.isNotEmpty){
-        print("actualizando informacion");
-        //CONTINUA POR ACA
-        //await globalCollUser.update(where.eq('_id', dataID), modify.set('users', listBodyUsers)); //falta algo aca
-        return true;
+        try{
+          for(int v = 0; v < listID.length; v++){
+            for(var hh in listBodyUsers){
+              if(hh['_id'] == listID[v]){
+                await globalCollUser.update(where.eq('_id', listID[v]), modify.set('ruteros', hh['ruteros']));
+              }
+            }
+          }
+          return true;
+        }
+        catch(e){
+          return false;
+        }
       }
       else{
         return false;
@@ -1393,7 +1403,7 @@ class ConsultDevices extends ResourceController {
                 'appVersion': val['appVersion'],
                 'panic': val['panic'],
                 'onlineDevices': val['onlineDevices'],
-                'update': false,
+                'update': true,
                 'GPS': val['GPS'],
                 'connectionIntent': val['connectionIntent'],
               };
@@ -1472,7 +1482,7 @@ class ConsultDevices extends ResourceController {
                   'appVersion': value2['appVersion'],
                   'panic': value2['panic'],
                   'onlineDevices': value2['onlineDevices'],
-                  'update': false,
+                  'update': true,
                   'GPS': value2['GPS'],
                   'connectionIntent': value2['connectionIntent'],
                 };

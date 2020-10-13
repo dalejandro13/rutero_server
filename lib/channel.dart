@@ -1,13 +1,9 @@
-// import 'package:mongo_dart/mongo_dart.dart';
-// import 'package:rutero_server/adminDB.dart';
 import 'package:rutero_server/consultCredentials.dart';
 import 'package:rutero_server/consultUsers.dart';
 import 'package:rutero_server/consultServer.dart';
 import 'package:rutero_server/consultDevice.dart';
 import 'package:rutero_server/variables.dart';
 import 'rutero_server.dart';
-import 'package:http/http.dart' as http;
-import 'package:html/parser.dart';
 
 /// This type initializes an application.
 ///

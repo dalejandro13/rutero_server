@@ -161,31 +161,6 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  // @Operation.get('nameClient')
-  // Future<Response> getInfoClient(@Bind.path('nameClient') String name) async {
-  //   try{
-  //     Map<String, dynamic> mapeo = null;
-  //     await globalCollUser.find().forEach((info) {
-  //       if(info['name'] == name){
-  //         mapeo = {'name': info['name'], 'password': info['password'], 'ftp': info['ftp']};
-  //       }
-  //     });
-
-  //     if(mapeo != null){
-  //       await admon.close();
-  //       return Response.ok(mapeo);
-  //     }
-  //     else{
-  //       await admon.close();
-  //       return Response.badRequest(body: {"ERROR": "Este usuario no existe en la base de datos, verifica la informacion"});
-  //     }
-  //   }
-  //   catch(e){
-  //     await admon.close();
-  //     return Response.badRequest(body: {"ERROR": e.toString()});
-  //   }
-  // }
-
   @Operation.post() //ingresar nuevo usuario si no existe
   Future<Response> createClient() async{
     bool start = false;
@@ -294,19 +269,18 @@ class ConsultDevices extends ResourceController {
   Future<Response> update() async {
     try{
       List<dynamic> identList = null, listDuplicate = null;
-
+      dynamic devices = null;
       Map<String, dynamic> body = null;
       identList = [];
       listDuplicate = [];
       body = await request.body.decode();
-      final devices = body['devices'];
+      devices = body['devices'];
 
       await globalCollDevice.find().forEach((data) async {
-          for(var vv in data['ruteros']){
-            for(var dd in devices){
-              if(vv['id'] == ObjectId.fromHexString(dd.toString())){
-                listDuplicate.add(dd.toString());
-                //await globalCollUser.update(where.eq('_id', dd.toString()), modify.set('update', false));
+        for(var vv in data['ruteros']){
+          for(var dd in devices){
+            if(vv['id'] == ObjectId.fromHexString(dd.toString())){
+              listDuplicate.add(dd.toString());
             }
           }
         }
@@ -315,14 +289,14 @@ class ConsultDevices extends ResourceController {
       identList = listDuplicate.toSet().toList();
 
       if(identList.isNotEmpty){
-        bool enab1 = false, enab2 = false, enab3 = false;
+        bool enab1 = false, enab2 = false, enab3 = false, newValueUpdate = true;
         
-        enab1 = await updateUsers(identList); //actualizar en Users
+        enab1 = await updateUsers(identList, newValueUpdate); //actualizar en Users
         if(enab1){
-          enab2 = await updateDevices(identList); //actualizar en Devices
+          enab2 = await updateDevices(identList, newValueUpdate); //actualizar en Devices
         }
         if(enab2){
-          enab3 = await updateServer(identList); //actualizar en server
+          enab3 = await updateServer(identList, newValueUpdate); //actualizar en server
         }
 
         if(enab1 && enab2 && enab3){
@@ -347,7 +321,6 @@ class ConsultDevices extends ResourceController {
 
   @Operation.post('nameorid') //ingresa datos de ruteros nuevos a los clientes que ya existan en la base de datos, ya sea por su nombre o por su id
   Future<Response> createDataRuteros(@Bind.path('nameorid') String nmOrId) async {
-    //String os = Platform.operatingSystem;
     bool start = false;
     int connectionIntent = 0;
     ready = false;
@@ -1284,7 +1257,7 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  Future<bool> updateUsers(List<dynamic> identList) async {
+  Future<bool> updateUsers(List<dynamic> identList, bool newValueUpdate) async {
     try{
       dynamic dataID = null, nameUser = null, password = null, ftp = null;
       Map<String, dynamic> newBody = null;
@@ -1323,7 +1296,7 @@ class ConsultDevices extends ResourceController {
                 'appVersion': value['appVersion'],
                 'panic': value['panic'],
                 'onlineDevices': value['onlineDevices'],
-                'update': true,
+                'update': newValueUpdate,
                 'GPS': value['GPS'],
                 'connectionIntent': value['connectionIntent'],
               };
@@ -1374,7 +1347,7 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  Future<bool> updateDevices(List<dynamic> identList) async{
+  Future<bool> updateDevices(List<dynamic> identList, bool newValueUpdate) async{
     try{
       int ctrlControl = 0;
       List<dynamic> tempBody = null;
@@ -1403,7 +1376,7 @@ class ConsultDevices extends ResourceController {
                 'appVersion': val['appVersion'],
                 'panic': val['panic'],
                 'onlineDevices': val['onlineDevices'],
-                'update': true,
+                'update': newValueUpdate,
                 'GPS': val['GPS'],
                 'connectionIntent': val['connectionIntent'],
               };
@@ -1442,7 +1415,7 @@ class ConsultDevices extends ResourceController {
     }
   }
 
-  Future<bool> updateServer(List<dynamic> identList) async{
+  Future<bool> updateServer(List<dynamic> identList, bool newValueUpdate) async{
     try{
       dynamic id = null, version = null, appVersion = null, idUser = null, nameUser = null,
       password = null, ftp = null;
@@ -1482,7 +1455,7 @@ class ConsultDevices extends ResourceController {
                   'appVersion': value2['appVersion'],
                   'panic': value2['panic'],
                   'onlineDevices': value2['onlineDevices'],
-                  'update': true,
+                  'update': newValueUpdate,
                   'GPS': value2['GPS'],
                   'connectionIntent': value2['connectionIntent'],
                 };

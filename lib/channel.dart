@@ -10,6 +10,7 @@ import 'rutero_server.dart';
 /// Override methods in this class to set up routes and initialize services like
 /// database connections. See http://aqueduct.io/docs/http/channel/.
 /// 
+/// http://192.168.1.200:9742/Api/FlexoRuteros
 class RuteroServerChannel extends ApplicationChannel {
 
   Variables variables;
@@ -20,6 +21,13 @@ class RuteroServerChannel extends ApplicationChannel {
     //connectRuteros();
     //"http://localhost:9742/Api/FlexoRuteros/Buses/GetAllDevices/[:idDevice]"
   }
+
+  // @override
+  // SecurityContext get securityContext {
+  //   return SecurityContext()
+  //     ..usePrivateKey("C:/Users/Administrador/Documents/WIN-KQ0KG5OR38J.key", password: "flexo")
+  //     ..useCertificateChain("C:/Users/Administrador/Documents/WIN-KQ0KG5OR38J.crt", password: "flexo");
+  // }
 
   // Future<void> getPublicIPAddress() async {
   //   try{

@@ -133,21 +133,69 @@ class ConsultDevices extends ResourceController {
   @Operation.get('name')
   Future<Response> getByName(@Bind.path('name') String name) async {
     try{
-      List<dynamic> busesList = null;
-      busesList = [];
+      List<dynamic> devicesList = null;
+      bool change = false;
+      String refA = null;
+      String refB = null;
+      String acum = null;
+      String resultA = null;
+      String resultB = null;
+      int valueA = 0;
+      int valueB = 0;
+      devicesList = [];
       await globalCollUser.find().forEach((bus) {
         if(bus['name'] == name){
           if(bus['ruteros'].length != 0){
             // ignore: prefer_foreach
             for(var value in bus['ruteros']){
-              busesList.add(value);
+              devicesList.add(value);
             }
           }
         }
       });
-      if(busesList.isNotEmpty){
+      
+      if(devicesList.isNotEmpty){
+        acum = "";
+        refA = "";
+        refB = "";
+        resultA = "";
+        resultB = "";
+
+        devicesList.sort((a, b) {
+          refA = a['name'].toString();
+          refB = b['name'].toString();
+
+          for(int i = 0; i < refA.length; i++){
+            if(change){
+              acum += refA[i];
+            }
+            if(refA[i] == '-'){
+              change = true;
+            }
+          }
+          resultA = acum.replaceAll(RegExp("[a-zA-Z]"), '');
+          acum = "";
+          change = false;
+
+          for(int i = 0; i < refB.length; i++){
+            if(change){
+              acum += refB[i];
+            }
+            if(refB[i] == '-'){
+              change = true;
+            }
+          }
+          resultB = acum.replaceAll(RegExp("[a-zA-Z]"), '');
+          acum = "";
+          change = false;
+
+          valueA = int.parse(resultA);
+          valueB = int.parse(resultB);
+          return valueA.compareTo(valueB);
+        });
+
         await admon.close();
-        return Response.ok(busesList);
+        return Response.ok(devicesList);
       }
       else{
         await admon.close();
